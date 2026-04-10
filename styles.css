@@ -1,0 +1,234 @@
+/* region map layout */
+
+.fantasy-map-container {
+	border-radius: 4px;
+	position: relative;
+	width: 100%;
+	overflow: hidden;
+}
+
+.fantasy-map-wrapper {
+	position: relative;
+	width: 100%;
+	height: 100%;
+	overflow: hidden;
+}
+
+/* background layer that tiles seamlessly */
+.fantasy-map-background {
+	position: relative;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	background-position: 0 0;
+	background-repeat: repeat;
+	transform: none;
+	z-index: 0;
+}
+
+/* tiles container and individual tiles */
+.fantasy-map-tiles {
+	position: absolute;
+	inset: 0;
+	transform-origin: top left;
+}
+
+.fm-tile {
+	position: absolute;
+	width: 100%;
+	height: 100%;
+	background-position: 0 0;
+	background-repeat: no-repeat;
+	background-size: 100% 100%;
+	z-index: 1;
+}
+
+.fantasy-map-container,
+.fantasy-map-background,
+.fantasy-map-tiles,
+.fm-tile {
+	/* prevent image selection / text selection */
+	user-select: none;
+	-webkit-user-select: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
+
+	/* prevent native drag image ghost */
+	-webkit-user-drag: none;
+	-khtml-user-drag: none;
+	-moz-user-drag: none;
+	user-drag: none;
+
+	/* hint that this area is for panning */
+	cursor: grab;
+}
+
+.fantasy-map-container:active,
+.fantasy-map-background:active,
+.fantasy-map-tiles:active,
+.fm-tile:active {
+	cursor: grabbing;
+}
+/* endregion */
+
+/* region toolbar */
+
+.fantasy-map-toolbar {
+	background-color: var(--background-secondary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 4px;
+	display: flex;      /* ensure flexbox */
+	flex-direction: row;
+	gap: 5px;           /* 5px space between children */
+	padding: 5px;
+	position: absolute;
+	bottom: 5px;
+	left: 5px;
+	z-index: 10;
+}
+
+.fantasy-map-toolbar button {
+	padding: 0.1rem 0.4rem;
+	font-size: 0.9rem;
+}
+
+.fantasy-map-toolbar input.fm-zoom-step {
+	width: 4rem;
+	font-size: 0.9rem;
+}
+
+/* base state: toolbar hidden */
+.fantasy-map-toolbar {
+	opacity: 0;
+	transition: opacity 150ms ease;
+}
+
+/* when hovering over the map container, show it */
+.fantasy-map-container:hover .fantasy-map-toolbar {
+	opacity: 1;
+}
+
+/* endregion */
+
+/* region pins */
+
+.map-pin {
+	position: absolute;
+	width: fit-content;
+	height: fit-content;
+	overflow: visible;
+	z-index: 5;
+}
+
+.map-pin-icon {
+	position: relative;
+	width: 24px;
+	height: auto;
+}
+
+.map-pin-icon svg {
+	display: block;
+	position: absolute;
+	bottom: 0;
+	left: 50%;
+	width: 100%;
+	height: auto;
+	transform-origin: center bottom;
+	transform: translateX(-100%);
+	transition: transform 120ms ease, filter 120ms ease;
+	color: var(--interactive-normal);
+}
+
+.map-pin-icon svg:hover {
+	cursor: pointer;
+	transform: translate(-100%, -10%) scale(1.1);
+	filter: drop-shadow(0 0 2px rgba(0,0,0,0.5));
+	color: var(--interactive-hover);
+}
+
+/* endregion */
+
+/* region page previews */
+
+.fantasy-map-hover-preview {
+	position: fixed;
+	width: 520px;              /* or keep max-width if you prefer */
+	max-height: 320px;
+	padding: 12px 14px;
+	border-radius: 8px;
+	background-color: var(--background-secondary);
+	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+	color: var(--text-normal);
+	opacity: 0;
+	pointer-events: none;
+	transform: translateY(4px);
+	transition: opacity 120ms ease, transform 120ms ease;
+	z-index: 9999;
+	overflow: hidden;          /* clip anything outside */
+}
+
+.fantasy-map-hover-preview.is-visible {
+	opacity: 1;
+	pointer-events: auto;
+	transform: translateY(0);
+}
+
+.fantasy-map-hover-preview .fm-hover-title {
+	font-size: var(--h1-size);          /* same as H1 */
+	font-weight: var(--h1-weight, 700); /* fallback if var not defined */
+	text-decoration: none;
+	display: inline-block;
+	margin: 0;
+}
+
+/* Optional: make internal links in the preview clickable */
+.fantasy-map-hover-preview a.internal-link {
+	text-decoration: underline;
+}
+
+/* header stays fixed at top */
+.fm-hover-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-bottom: 6px;
+}
+
+.fm-hover-open {
+	font-size: 0.85rem;
+	cursor: pointer;
+	opacity: 0.7;
+}
+
+.fm-hover-open:hover {
+	opacity: 1;
+}
+
+.fm-hover-content {
+	max-height: 260px;         /* 320 - header & padding */
+	overflow-y: auto;          /* vertical scrollbar when needed */
+	font-size: 0.9rem;
+	line-height: 1.4;
+	padding-right: 4px;        /* room for scrollbar */
+}
+
+.fantasy-map-hover-preview .fm-hover-content img,
+.fantasy-map-hover-preview .fm-hover-content svg,
+.fantasy-map-hover-preview .fm-hover-content video,
+.fantasy-map-hover-preview .fm-hover-content .internal-embed img {
+	max-width: 100%;
+	height: auto;
+	display: block;
+}
+
+.fantasy-map-hover-preview .fm-hover-content .internal-embed,
+.fantasy-map-hover-preview .fm-hover-content .image-embed {
+	max-width: 100%;
+	overflow: hidden;
+}
+
+.fantasy-map-hover-preview .fm-hover-content p {
+	overflow-wrap: anywhere;
+}
+/* endregion */
+
