@@ -1,5 +1,5 @@
-import {App, MarkdownRenderer} from "obsidian";
-import {FantasyMapSettings} from "./settings";
+import { App, Component, MarkdownRenderer, MarkdownPostProcessorContext } from "obsidian";
+import { FantasyMapSettings } from "./settings";
 
 // This interface defines the structure of the parameters that can be passed to the map renderer, including the required "map" parameter and various optional parameters with their corresponding types
 export interface FantasyMapParams {
@@ -108,12 +108,12 @@ const helpKeywords = [
 ];
 
 // This function parses the parameters from the code block content and returns an object with the corresponding values, applying defaults where necessary
-export function parseFantasyMapParams(source: string, element: HTMLElement, ctx: MarkdownPostProcessorContext, settings: FantasyMapSettings): FantasyMapParams {
+export function parseFantasyMapParams(source: string, element: HTMLElement, ctx: MarkdownPostProcessorContext, component: Component, settings: FantasyMapSettings): FantasyMapParams {
 	
 	// split the code block content into lines, trim whitespace, and filter out any empty lines to prepare for parsing; this allows users to format their parameters with extra spaces or blank lines without affecting the parsing logic
 	const lines = source.split("\n").map(l => l.trim()).filter(Boolean);
 	const params: any = {};
-	const helpMessages = [];
+	const helpMessages: string[] = [];
 
 	// This function adds a help message to the helpMessages array if it hasn't already been added, and logs the added message to the console for debugging purposes; this ensures that each help message is only added once, even if multiple parameters contain help keywords
 	function addHelpMessage(message: string) {
@@ -121,7 +121,7 @@ export function parseFantasyMapParams(source: string, element: HTMLElement, ctx:
 	}
 	
 	// if there are no lines of content in the code block, display a help message with usage instructions to guide users on how to use the plugin and what parameters are available; this provides a helpful starting point for users who may be new to the plugin or unsure of how to format their parameters
-	if (lines.length == 0) fantasyMapHelpMessage(element, ctx, compileHelpMessages(allHelpMessages(settings), "##### Available Fantasy Map Parameters:"), true);
+	if (lines.length == 0) fantasyMapHelpMessage(element, ctx, component, compileHelpMessages(allHelpMessages(settings), "##### Available Fantasy Map Parameters:"), true);
 	
 	// iterate through each line of the code block content, parsing the key and value for each parameter and applying the appropriate logic based on the parameter type and expected format; if a help keyword is detected in the value of any parameter, the corresponding help message will be added to the helpMessages array and displayed to the user without an error prefix
 	else for (const line of lines) {
@@ -307,17 +307,19 @@ export function parseFantasyMapParams(source: string, element: HTMLElement, ctx:
 	if (params.unitOfMeasurement == null) params.unitOfMeasurement = settings.defaultUnitOfMeasurement;
 	if (params.equatorialCircumference == null) params.equatorialCircumference = params.measurementUnits === "Metric" ? 40075 : 24901;
 	
-	if (helpMessages.length > 0) fantasyMapHelpMessage(element, ctx, compileHelpMessages(helpMessages, "##### Fantasy Map Help Messages:"), true);
+	if (helpMessages.length > 0) fantasyMapHelpMessage(element, ctx, component, compileHelpMessages(helpMessages, "##### Fantasy Map Help Messages:"), true);
 	
 	return params as FantasyMapParams;
 }
 
 // Render a help message to markdown
-export async function fantasyMapHelpMessage(element: HTMLElement, ctx: MarkdownPostProcessorContext, message: string, includeCopyLink: boolean = false) {
+export async function fantasyMapHelpMessage(element: HTMLElement, ctx: MarkdownPostProcessorContext, component: Component, message: string | null, includeCopyLink: boolean = false) {
+	
+	if (message == null) return;
 	
 	// Render the markdown message in the code block container
 	const container = element.createDiv();
-	await MarkdownRenderer.renderMarkdown(message ?? "", container, ctx.sourcePath, this as any);
+	await MarkdownRenderer.renderMarkdown(message ?? "", container, ctx.sourcePath, component);
 	if (includeCopyLink) appendCopyLink(container);
 }
 
@@ -337,8 +339,8 @@ export function appendCopyLink(container: HTMLElement) {
 	});
 }
 
-export function compileHelpMessages(messages: string[], title: string) : string { 
-	if (messages == null || messages.length == 0) return null;
+export function compileHelpMessages(messages: string[], title: string) : string | null { 
+	if (messages.length == 0) return null;
 	
 	const message = [title?? null];
 	messages.forEach(m => {message.push("- {0}".replace("{0}", m))});

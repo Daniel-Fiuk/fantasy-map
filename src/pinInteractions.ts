@@ -1,7 +1,6 @@
 import {App, CachedMetadata, MarkdownPostProcessorContext, MarkdownRenderer, Plugin, TFile, Component } from "obsidian";
 import { FantasyMapSettings } from "./settings";
 import { FantasyMapParams } from "./paramaters";
-import { updateMapInnerSize } from "./mapRenderer";
 import { cancelMapPanning } from "./mapInteractions";
 import { showCustomPreview, hideCustomPreview, destroyCustomPreview } from "./previewInteractions"
 
@@ -40,6 +39,8 @@ export async function initPinInteractions(
 	currentMap.width = wrapper.clientWidth;
 	currentMap.height = wrapper.clientHeight;
 	
+	if (paramaters.latitudeRange == null || paramaters.longitudeRange == null) return;
+	
 	// define the map latitude and longitude bounds
 	latBounds = { min: paramaters.latitudeRange[0], max: paramaters.latitudeRange[1] };
 	lngBounds = { min: paramaters.longitudeRange[0], max: paramaters.longitudeRange[1] };
@@ -71,7 +72,7 @@ export async function initPinInteractions(
 		if (!location) return;
 		
 		// skip locations that are outside the map bounds 
-		if (location.lat < latBounds.min || location.lat > latBounds.max || location.lng < lngBounds.min || location.lng > lngBounds.max) return``;
+		if (location.lat < latBounds.min || location.lat > latBounds.max || location.lng < lngBounds.min || location.lng > lngBounds.max) return;
 
 		//#endregion
 
@@ -112,7 +113,7 @@ export async function initPinInteractions(
 	});
 	
 	wrapper.addEventListener("pointerup", async (e) => {
-		if (!selectedPin) return;
+		if (!selectedPin || selectedPin == null) return;
 		
 		if (selectedPin.note) {
 			if (enablePinDrag) {
@@ -123,7 +124,8 @@ export async function initPinInteractions(
 
 				selectedPin.location = pxToLocation(px);
 				await app.fileManager.processFrontMatter(selectedPin.note, (frontmatter) => {
-					frontmatter["fantasy-map-location"] = formatLocation(selectedPin.location);
+					if (!selectedPin) return;
+					frontmatter["fantasy-map-location"] = formatLocation(selectedPin?.location);
 				});
 			}
 			else {

@@ -1,6 +1,6 @@
 // noinspection JSUnusedGlobalSymbols
 
-import { MarkdownPostProcessorContext, Plugin, TFile } from 'obsidian';
+import { MarkdownPostProcessorContext, Component, Plugin, TFile } from 'obsidian';
 import { DEFAULT_SETTINGS, FantasyMapSettings, FantasyMapSettingTab } from "./settings";
 import { parseFantasyMapParams, fantasyMapHelpMessage } from "./paramaters";
 import { initMapInteractions } from "./mapInteractions";
@@ -43,7 +43,7 @@ export default class FantasyMap extends Plugin {
 
 	async main(source: string, element: HTMLElement, ctx: MarkdownPostProcessorContext) {
 		// get the user parameters set inside the defined code block in the note, and if the map parameter is not set or is empty, quit out of the function
-		const parameters = parseFantasyMapParams(source, element, ctx, this.settings);
+		const parameters = parseFantasyMapParams(source, element, ctx, this as Component, this.settings);
 		if (parameters.map == null || parameters.map.trim() === "") return;
 
 		//#region get the map file
@@ -68,7 +68,7 @@ export default class FantasyMap extends Plugin {
 
 		// if we can't find the map file, display an error message and quit
 		if (mapFile == null || !mapFile) {
-			await fantasyMapHelpMessage(element, ctx, `<span class=\"fantasy-map-error\">Fantasy Map Error: Map file "${parameters.map}" not found in vault! Double-check the file name and path, and make sure the file is located somewhere in your vault.</span>`);
+			await fantasyMapHelpMessage(element, ctx, this, `<span class=\"fantasy-map-error\">Fantasy Map Error: Map file "${parameters.map}" not found in vault! Double-check the file name and path, and make sure the file is located somewhere in your vault.</span>`, false);
 			return;
 		}
 

@@ -1,6 +1,7 @@
 import { App } from "obsidian";
-import { React } from "react";
-import { updatePinPositions } from "pinInteractions";
+import { updatePinPositions } from "./pinInteractions";
+import { FantasyMapParams } from "./paramaters";
+import { FantasyMapSettings } from "./settings";
 
 export interface PanZoomState {
 	zoom: number;
@@ -11,12 +12,11 @@ export interface PanZoomState {
 }
 
 let isPanning: boolean = false;
-let wrapper: HTMLElement | null = null;
 let lastX: number = 0;
 let lastY: number = 0;
 
 export function initMapInteractions(
-	app: APP,
+	app: App,
 	wrapper: HTMLElement,
 	bgLayer: HTMLElement,
 	tilesLayer: HTMLElement,
@@ -32,7 +32,7 @@ export function initMapInteractions(
 		maxZoom: 15
 	};
 
-	this.wrapper = wrapper;
+	wrapper;
 	
 	function applyTransform() {
 		// size of one world tile in screen space at current zoom
@@ -143,7 +143,7 @@ export function initMapInteractions(
 
 	wrapper.addEventListener("pointermove", (e) => {
 		if (!isPanning) {
-			this.wrapper.releasePointerCapture(e.pointerId);
+			wrapper.releasePointerCapture(e.pointerId);
 			return;
 		}
 		
@@ -165,7 +165,8 @@ export function initMapInteractions(
 	wrapper.addEventListener("wheel", (e) => {
 		e.preventDefault();
 		const zoomStep = toolbar.querySelector(".fm-zoom-step") as HTMLInputElement;
-		const factor = e.deltaY < 0 ? (1 + zoomStep.value * 0.1) : 1 / (1 + zoomStep.value * 0.1);
+		const zoomValue = Number(zoomStep.value);
+		const factor = e.deltaY < 0 ? (1 + zoomValue * 0.1) : 1 / (1 + zoomValue * 0.1);
 		zoomAt(e.clientX, e.clientY, factor);
 	}, { passive: false });
 	
@@ -182,14 +183,16 @@ export function initMapInteractions(
 
 	zoomInBtn?.addEventListener("click", () => {
 		const stepInput = toolbar.querySelector(".fm-zoom-step") as HTMLInputElement;
-		const step = Math.abs(Number(stepInput?.value)) || paramaters.defaultZoomIncrement || settings.defaultZoomIncrement;
+		const stepValue = Number(stepInput?.value);
+		const step = Math.abs(stepValue) || paramaters.defaultZoomIncrement || settings.defaultZoomIncrement;
 		const factorBase = 1 + step * 0.1;
 		zoomAtViewportCenter(factorBase);
 	});
 
 	zoomOutBtn?.addEventListener("click", () => {
 		const stepInput = toolbar.querySelector(".fm-zoom-step") as HTMLInputElement;
-		const step = Math.abs(Number(stepInput?.value)) || paramaters.defaultZoomIncrement || settings.defaultZoomIncrement;
+		const stepValue = Number(stepInput?.value);
+		const step = Math.abs(stepValue) || paramaters.defaultZoomIncrement || settings.defaultZoomIncrement;
 		const factorBase = 1 + step * 0.1;
 		zoomAtViewportCenter(1 / factorBase);
 	});
