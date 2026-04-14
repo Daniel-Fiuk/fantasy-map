@@ -162,7 +162,7 @@ export function initMapInteractions(
 		(e) => {
 			e.preventDefault();
 
-			const zoomStep = toolbar.querySelector(".fm-zoom-step");
+			const zoomStep = toolbar.querySelector<HTMLInputElement>(".fm-zoom-step");
 			const zoomValue = Number(zoomStep?.value);
 			const base = 1 + (isNaN(zoomValue) ? settings.defaultZoomIncrement : zoomValue) * 0.1;
 
@@ -184,7 +184,7 @@ export function initMapInteractions(
 	}
 
 	zoomInBtn?.addEventListener("click", () => {
-		const stepInput = toolbar.querySelector(".fm-zoom-step");
+		const stepInput = toolbar.querySelector<HTMLInputElement>(".fm-zoom-step");
 		const stepValue = Number(stepInput?.value);
 		const step = Math.abs(stepValue) || paramaters.defaultZoomIncrement || settings.defaultZoomIncrement;
 		const factorBase = 1 + step * 0.1;
@@ -192,7 +192,7 @@ export function initMapInteractions(
 	});
 
 	zoomOutBtn?.addEventListener("click", () => {
-		const stepInput = toolbar.querySelector(".fm-zoom-step");
+		const stepInput = toolbar.querySelector<HTMLInputElement>(".fm-zoom-step");
 		const stepValue = Number(stepInput?.value);
 		const step = Math.abs(stepValue) || paramaters.defaultZoomIncrement || settings.defaultZoomIncrement;
 		const factorBase = 1 + step * 0.1;

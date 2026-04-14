@@ -67,11 +67,12 @@ export default class FantasyMap extends Plugin {
 
 		if (!mapFile) {
 			await fantasyMapHelpMessage(
+				this.app,
 				element,
-				ctx,
-				this,
 				`Fantasy Map Error: Map file "${parameters.map}" not found in vault! Double-check the file name and path, and make sure the file is located somewhere in your vault.`,
-				false
+				false,
+				ctx.sourcePath,
+				this
 			);
 			return;
 		}
