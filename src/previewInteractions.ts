@@ -46,9 +46,13 @@ export async function showCustomPreview(
 	wirePreviewLinks(contentEl, app, pin.note.path);
 
 	const rect = pin.element.getBoundingClientRect();
-	container.style.position = "fixed";
-	container.style.top = `${rect.bottom + 8}px`;
-	container.style.left = `${rect.left}px`;
+
+	container.setCssStyles({
+		position: "fixed",
+		top: `${rect.bottom + 8}px`,
+		left: `${rect.left}px`,
+	});
+	
 	container.addClass("is-visible");
 }
 

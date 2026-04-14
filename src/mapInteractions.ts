@@ -44,14 +44,16 @@ export function initMapInteractions(
 		const wrappedY = (state.offsetY % tileHeight) - tileHeight;
 
 		// tiles: transform via CSS scale/translate
-		const transform = `translate(${wrappedX}px, ${wrappedY}px) scale(${state.zoom})`;
-		tilesLayer.style.transform = transform;
-		tilesLayer.style.transformOrigin = "top left";
+		tilesLayer.setCssStyles({
+			transform: `translate(${wrappedX}px, ${wrappedY}px) scale(${state.zoom})`,
+			transformOrigin: "top left"
+		});
 
 		// background: matching zoom/pan via background-size/position
-		const widthPercent = 100 * state.zoom;
-		bgLayer.style.backgroundSize = `${widthPercent}% auto`;
-		bgLayer.style.backgroundPosition = `${wrappedX}px ${wrappedY}px`;
+		bgLayer.setCssStyles({
+			backgroundSize: `${100 * state.zoom}% auto`,
+			backgroundPosition: `${wrappedX}px ${wrappedY}px`
+		})
 
 		updatePinPositions(state.offsetX, state.offsetY, tileWidth, tileHeight);
 	}
@@ -160,7 +162,7 @@ export function initMapInteractions(
 		applyTransform();
 	});
 	
-	wrapper.addEventListener("pointerup", async (e) => { cancelMapPanning(); });
+	wrapper.addEventListener("pointerup", (e) => { cancelMapPanning(); });
 
 	wrapper.addEventListener("wheel", (e) => {
 		e.preventDefault();

@@ -36,7 +36,7 @@ function allHelpMessages(settings: FantasyMapSettings) : string[] {
 	return [
 		mapHelpMessageString,
 		mapIDsHelpMessageString,
-		defaultZoomIncrementHelpMessageString.replace("default: \"1\"", `default: \"${settings.defaultZoomIncrement}\"`),
+		defaultZoomIncrementHelpMessageString.replace("default: '1'", `default: '${settings.defaultZoomIncrement}'`),
 		defaultZoomLevelHelpMessageString,
 /*		defaultLocationHelpMessageString,*/
 		repeatHelpMessageString,
@@ -315,8 +315,8 @@ export function parseFantasyMapParams(source: string, element: HTMLElement, ctx:
 		}
 	}
 
-	// Defaults
-	if (params.pinSize == null) params.pinSize = settings.defaultPinSize;
+	// Defaults 
+	if (params.pinSize == null || params.pinSize.length == 0) params.pinSize = settings.defaultPinSize as string;
 	if (params.defaultZoomIncrement == null) params.defaultZoomIncrement = settings.defaultZoomIncrement;
 	if (params.defaultZoomLevel == null) params.defaultZoomLevel = 1;
 	if (params.defaultLocation == null) params.defaultLocation = [0, 0];
@@ -332,16 +332,19 @@ export function parseFantasyMapParams(source: string, element: HTMLElement, ctx:
 	return params as FantasyMapParams;
 }
 
-function isValidPinSize(value: string): boolean {
+export function isValidPinSize(value: string): boolean {
 	const trimmed = value.trim();
 	if (!trimmed) return false;
 
 	const el = document.createElement("div");
-	el.style.width = "";
-	el.style.width = trimmed;
+
+	el.setCssStyles({ width: "" });
+	el.setCssStyles({ width: trimmed });
 
 	const result = el.style.width !== "";
 	el.remove();
+	console.log(result)
+	
 	return result;
 }
 

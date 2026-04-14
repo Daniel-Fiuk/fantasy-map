@@ -1,6 +1,6 @@
 import { App, PluginSettingTab, Setting } from "obsidian";
 import FantasyMap from "./main";
-import { fantasyMapCodeBlockCopyToClipboardString, fantasyMapFrontMatterCopyToClipboardString } from "./paramaters";
+import { fantasyMapCodeBlockCopyToClipboardString, fantasyMapFrontMatterCopyToClipboardString, isValidPinSize } from "./paramaters";
 
 export interface FantasyMapSettings {
 	defaultPinSize: string; // e.g. "24px", "1.5rem", "5%"
@@ -67,19 +67,6 @@ export class FantasyMapSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					});
 			});
-
-		function isValidPinSize(value: string): boolean {
-			const trimmed = value.trim();
-			if (!trimmed) return false;
-
-			const el = document.createElement("div");
-			el.style.width = "";
-			el.style.width = trimmed;
-
-			const result = el.style.width !== "";
-			el.remove();
-			return result;
-		}
 		
 		new Setting(containerEl)
 			.setName('Default Zoom Increment')
@@ -106,8 +93,10 @@ export class FantasyMapSettingTab extends PluginSettingTab {
 				text.setValue(fantasyMapCodeBlockCopyToClipboardString);
 				text.setDisabled(true);
 				text.inputEl.rows = 11; // adjust to fit your block
-				text.inputEl.style.width = "100%";
-				text.inputEl.style.fontFamily = "var(--font-monospace)";
+				text.inputEl.setCssStyles({
+					width: "100%",
+					fontFamily: "var(--font-monospace)",
+				});
 			})
 			.addButton(button => {
 				button
@@ -133,8 +122,10 @@ export class FantasyMapSettingTab extends PluginSettingTab {
 				text.setValue(fantasyMapFrontMatterCopyToClipboardString);
 				text.setDisabled(true);
 				text.inputEl.rows = 11; // adjust to fit your block
-				text.inputEl.style.width = "100%";
-				text.inputEl.style.fontFamily = "var(--font-monospace)";
+				text.inputEl.setCssStyles({
+					width: "100%",
+					fontFamily: "var(--font-monospace)",
+				});
 			})
 			.addButton(button => {
 				button

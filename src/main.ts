@@ -90,7 +90,9 @@ export default class FantasyMap extends Plugin {
 
 		// set image URL
 		const mapUrl = this.app.vault.getResourcePath(mapFile);
-		bgLayer.style.backgroundImage = `url("${mapUrl}")`;
+		bgLayer.setCssStyles({
+			backgroundImage: `url("${mapUrl}")`
+		});
 
 		// load image to infer aspect and tile layout
 		const mapImg = new Image();
@@ -103,12 +105,16 @@ export default class FantasyMap extends Plugin {
 			const baseHeight = wrapperWidth * ratio;
 
 			// base height before zoom
-			mapWrapper.style.height = `${baseHeight}px`;
+			mapWrapper.setCssStyles({
+				height: `${baseHeight}px`,
+			});
 
 			// background tiling (seamless)
-			bgLayer.style.backgroundRepeat = "repeat"; // always repeat for gap hiding
-			bgLayer.style.backgroundSize = "auto 100%"; // will be overridden by pan/zoom
-
+			bgLayer.setCssStyles({
+				backgroundRepeat: "repeat",
+				backgroundSize: "auto 100%",
+			})
+			
 			// create a small grid of tiles to cover viewport + margins
 			const tilesX = 3; // center + one left + one right
 			const tilesY = 3; // center + one up + one down
@@ -116,9 +122,13 @@ export default class FantasyMap extends Plugin {
 			for (let y = 0; y < tilesY; y++) {
 				for (let x = 0; x < tilesX; x++) {
 					const tile = tilesLayer.createEl("div", { cls: "fm-tile" });
-					tile.style.backgroundImage = `url("${mapUrl}")`;
-					tile.style.backgroundRepeat = "no-repeat";
-					tile.style.backgroundSize = "100% 100%";
+					
+					tile.setCssStyles({
+						backgroundImage: `url("${mapUrl}")`,
+						backgroundRepeat: "no-repeat",
+						backgroundSize: "100% 100%",
+					});
+					
 					tile.dataset.tileX = String(x);
 					tile.dataset.tileY = String(y);
 				}
@@ -137,10 +147,10 @@ export default class FantasyMap extends Plugin {
 		function positionTiles(tilesLayer: HTMLElement) {
 			const tiles = Array.from(tilesLayer.querySelectorAll<HTMLElement>(".fm-tile"));
 			tiles.forEach(tile => {
-				const tx = Number(tile.dataset.tileX);
-				const ty = Number(tile.dataset.tileY);
-				tile.style.left = `${tx * 100}%`;
-				tile.style.top = `${ty * 100}%`;
+				tile.setCssStyles({
+					left: `${Number(tile.dataset.tileX) * 100}%`,
+					top: `${Number(tile.dataset.tileY) * 100}%`,
+				});
 			});
 		}
 		

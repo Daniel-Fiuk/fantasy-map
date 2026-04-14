@@ -83,8 +83,10 @@ export async function initPinInteractions(
 
 		// translate the location's latitude and longitude to a px of the map bounds for CSS positioning and apply them to the pin element
 		const formattedPx = formatPx(locationToPx(location));
-		element.style.left = formattedPx.left;
-		element.style.top = formattedPx.top;
+		element.setCssStyles({
+			left: formattedPx.left,
+			top: formattedPx.top
+		});
 
 		// get the pin icon and add it to the pin element; set the width of the icon to 12px
 		const pinIconEl = element.createEl("div", { cls: "map-pin-icon" });
@@ -106,14 +108,12 @@ export async function initPinInteractions(
 		}
 		
 		const match = paramaters.pinSize.trim().match(/^([+-]?(?:\d+(?:\.\d+)?|\.\d+))%$/);
-		if (match) pinIconEl.style.width = `${Number(match[1]) * 0.01 * currentMap.width}px`;
-		else pinIconEl.style.width = paramaters.pinSize;
+		if (match) pinIconEl.setCssStyles({ width: `${Number(match[1]) * 0.01 * currentMap.width}px` });
+		else pinIconEl.setCssStyles({ width: paramaters.pinSize });
 		//#endregion
 		
 		const newPin = { note, element, location }
-
 		initPinActions(newPin, app, component);
-		
 		Pins.push(newPin);
 	}
 	
@@ -126,8 +126,10 @@ export async function initPinInteractions(
 		}
 		
 		const formattedPx = formatPx(mouseToPx(e, wrapper.getBoundingClientRect()));
-		selectedPin.element.style.left = formattedPx.left;
-		selectedPin.element.style.top = formattedPx.top;
+		selectedPin.element.setCssStyles({
+			left: formattedPx.left,
+			top: formattedPx.top
+		});
 	});
 	
 	wrapper.addEventListener("pointerup", async (e) => {
@@ -307,9 +309,11 @@ export function updatePinPositions(offsetX: number, offsetY: number, tileWidth: 
 			left: `${wrapValue(px.left + offsetX, tileWidth)}px`,
 			top: `${wrapValue(px.top + offsetY, tileHeight)}px`
 		}
-		
-		pin.element.style.left = formattedPx.left;
-		pin.element.style.top  = formattedPx.top;
+
+		pin.element.setCssStyles({
+			top: formattedPx.top,
+			left: formattedPx.left
+		});
 	}
 }
 
