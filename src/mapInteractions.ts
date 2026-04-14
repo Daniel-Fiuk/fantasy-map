@@ -190,7 +190,7 @@ export function initMapInteractions(
 		const factorBase = 1 + step * 0.1;
 		zoomAtViewportCenter(factorBase);
 	});
-
+     
 	zoomOutBtn?.addEventListener("click", () => {
 		const stepInput = toolbar.querySelector<HTMLInputElement>(".fm-zoom-step");
 		const stepValue = Number(stepInput?.value);

@@ -122,6 +122,8 @@ export async function initPinInteractions(
 
 		enablePinDrag = false;
 		selectedPin = null;
+
+		return;
 	});
 
 	wrapper.addEventListener("pointerleave", () => {
@@ -144,11 +146,11 @@ export async function initPinInteractions(
 
 		const mapIDs = paramaters.mapIDs ?? [];
 		if (mapIDs.length > 0 && mapIDs[0] !== "") {
-			const mapId = frontMatter["fm-id"];
+			const mapId: unknown = frontMatter["fm-id"];
 			if (mapId !== undefined && !mapIDs.includes(String(mapId))) return;
 		}
 
-		const frontMatterLocation = frontMatter["fm-location"];
+		const frontMatterLocation: unknown = frontMatter["fm-location"];
 		if (frontMatterLocation === undefined) return;
 
 		const location = parseFormattedLocation(String(frontMatterLocation));
@@ -173,7 +175,7 @@ export async function initPinInteractions(
 
 		const pinIconEl = pinElement.createEl("div", { cls: "map-pin-icon" });
 
-		const pinIconValue = frontMatter["fm-pin-icon"];
+		const pinIconValue: unknown = frontMatter["fm-pin-icon"];
 		const pinFile = resolvePinIconFile(app, pinIconValue, ctx.sourcePath);
 
 		if (pinFile) {
