@@ -68,7 +68,7 @@ export default class FantasyMap extends Plugin {
 
 		// if we can't find the map file, display an error message and quit
 		if (mapFile == null || !mapFile) {
-			await fantasyMapHelpMessage(element, ctx, this, `<span class=\"fantasy-map-error\">Fantasy Map Error: Map file "${parameters.map}" not found in vault! Double-check the file name and path, and make sure the file is located somewhere in your vault.</span>`, false);
+			await fantasyMapHelpMessage(element, ctx, this, `Fantasy Map Error: Map file "${parameters.map}" not found in vault! Double-check the file name and path, and make sure the file is located somewhere in your vault.`, false);
 			return;
 		}
 
@@ -130,7 +130,7 @@ export default class FantasyMap extends Plugin {
 			initMapInteractions(this.app, mapWrapper, bgLayer, tilesLayer, toolbar, parameters, this.settings);
 
 			// 
-			initPinInteractions(this.app, this, mapWrapper, parameters, this.settings, element, ctx);
+			await initPinInteractions(this.app, this, mapWrapper, parameters, this.settings, element, ctx);
 		};
 
 		// helper to place tiles in a grid

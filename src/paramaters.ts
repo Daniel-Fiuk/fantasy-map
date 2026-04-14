@@ -178,7 +178,7 @@ export function parseFantasyMapParams(source: string, element: HTMLElement, ctx:
 				// help message for the map parameter if the value contains any help keywords
 				if (checkForHelp(mapHelpMessageString)) break;
 				
-				if (value.trim().length == 0) addHelpMessage("<span class=\"fantasy-map-error\">Fantasy Map ERROR: map option is required!</span>");
+				if (value.trim().length == 0) addHelpMessage("Fantasy Map ERROR: map option is required!");
 				
 				// set the name of the map to load; supports relative paths, absolute paths, and bare filenames (e.g. "World Map.svg") - the file must be located somewhere in your vault - supported file types are SVG, PNG, JPG, JPEG, WEBP, and GIF
 				params.map = value; 
@@ -197,7 +197,7 @@ export function parseFantasyMapParams(source: string, element: HTMLElement, ctx:
 				if (checkForHelp(pinSizeHelpMessageString)) break;
 
 				const trimmed = value.trim();
-				if (!isValidPinSize(trimmed)) addHelpMessage("<span class=\"fantasy-map-error\">Fantasy Map ERROR: Pin Size Value is invalid! Some examples of acceptable values are '24px', '5%'. This option utalizes css styles, specificaly the width property. </span>")
+				if (!isValidPinSize(trimmed)) addHelpMessage("Fantasy Map ERROR: Pin Size Value is invalid! Some examples of acceptable values are '24px', '5%'. This option utalizes css styles, specificaly the width property.")
 				
 				params.pinSize = value;
 				break;
