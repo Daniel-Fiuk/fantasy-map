@@ -104,11 +104,6 @@ const bothRepeatAffirmatives = [
 	"both", "b",
 ];
 
-const imperialUnits = [
-	"imperial",
-	"us customary",
-];
-
 const helpKeywords = [
 	"help",
 	"-h",
@@ -312,9 +307,10 @@ export function isValidPinSize(value: string): boolean {
 	if (!trimmed) return false;
 
 	const el = document.createElement("div");
-	el.style.width = "";
-	el.style.width = trimmed;
-
+	
+	el.setCssStyles({ width: "" });
+	el.setCssStyles({ width: trimmed });
+	
 	const result = el.style.width !== "";
 	el.remove();
 
@@ -331,7 +327,7 @@ export async function fantasyMapHelpMessage(
 	if (message == null) return;
 
 	const container = element.createDiv();
-	await MarkdownRenderer.renderMarkdown(message, container, ctx.sourcePath, component);
+	await MarkdownRenderer.render(message, container, ctx.sourcePath, component);
 
 	if (includeCopyLink) appendCopyLink(container);
 }
@@ -339,22 +335,26 @@ export async function fantasyMapHelpMessage(
 export function appendCopyLink(container: HTMLElement) {
 	const wrapper = container.createDiv({ cls: "fantasy-map-copy-link" });
 	const link = wrapper.createEl("a", {
-		text: "Copy Fantasy-Map template",
+		text: "Copy Fantasy-Map code block",
 		href: "#",
 	});
 
-	link.addEventListener("click", async (event) => {
+	async function handleCopyClick(event: MouseEvent) {
 		event.preventDefault();
 
 		try {
 			await navigator.clipboard.writeText(fantasyMapCodeBlockCopyToClipboardString);
-			link.setText("Copied!");
-			new Notice("Fantasy-Map template copied");
-			setTimeout(() => link.setText("Copy Fantasy-Map template"), 1500);
+			link.setText("Copied");
+			new Notice("Fantasy-Map code block copied");
+			window.setTimeout(() => link.setText("Copy Fantasy-Map code block"), 1500);
 		} catch (err) {
 			console.warn("Fantasy-Map copy failed", err);
-			new Notice("Failed to copy Fantasy-Map template");
+			new Notice("Failed to copy Fantasy-Map code block");
 		}
+	}
+
+	link.addEventListener("click", (event) => {
+		void handleCopyClick(event);
 	});
 }
 

@@ -106,7 +106,6 @@ export default class FantasyMap extends Plugin {
 
 		mapImg.onload = async () => {
 			const ratio = mapImg.naturalHeight / mapImg.naturalWidth;
-			(mapWrapper as any)._mapAspectRatio = ratio;
 
 			const wrapperWidth = mapWrapper.clientWidth;
 			const baseHeight = wrapperWidth * ratio;

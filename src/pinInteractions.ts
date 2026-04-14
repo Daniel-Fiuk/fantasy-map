@@ -297,7 +297,7 @@ function formatPx(px: Position): FormattedPosition {
 	};
 }
 
-function parseFormattedPx(formattedPx: FormattedPosition): Position | null {
+/*function parseFormattedPx(formattedPx: FormattedPosition): Position | null {
 	const leftMatch = formattedPx.left.match(/(-?\d+(?:\.\d+)?)\s*px/);
 	const topMatch = formattedPx.top.match(/(-?\d+(?:\.\d+)?)\s*px/);
 	if (!leftMatch || !topMatch) return null;
@@ -306,7 +306,7 @@ function parseFormattedPx(formattedPx: FormattedPosition): Position | null {
 		left: Number(leftMatch[1]),
 		top: Number(topMatch[1]),
 	};
-}
+}*/
 
 function locationToPx(locVal: Location): Position {
 	return {

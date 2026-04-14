@@ -162,7 +162,7 @@ export function initMapInteractions(
 		(e) => {
 			e.preventDefault();
 
-			const zoomStep = toolbar.querySelector(".fm-zoom-step") as HTMLInputElement;
+			const zoomStep = toolbar.querySelector(".fm-zoom-step");
 			const zoomValue = Number(zoomStep?.value);
 			const base = 1 + (isNaN(zoomValue) ? settings.defaultZoomIncrement : zoomValue) * 0.1;
 
@@ -172,9 +172,9 @@ export function initMapInteractions(
 		{ passive: false }
 	);
 
-	const zoomInBtn = toolbar.querySelector(".fm-zoom-in") as HTMLButtonElement | null;
-	const zoomOutBtn = toolbar.querySelector(".fm-zoom-out") as HTMLButtonElement | null;
-	const resetBtn = toolbar.querySelector(".fm-reset") as HTMLButtonElement | null;
+	const zoomInBtn = toolbar.querySelector(".fm-zoom-in");
+	const zoomOutBtn = toolbar.querySelector(".fm-zoom-out");
+	const resetBtn = toolbar.querySelector(".fm-reset");
 
 	function zoomAtViewportCenter(zoomFactor: number) {
 		const rect = wrapper.getBoundingClientRect();
@@ -184,7 +184,7 @@ export function initMapInteractions(
 	}
 
 	zoomInBtn?.addEventListener("click", () => {
-		const stepInput = toolbar.querySelector(".fm-zoom-step") as HTMLInputElement;
+		const stepInput = toolbar.querySelector(".fm-zoom-step");
 		const stepValue = Number(stepInput?.value);
 		const step = Math.abs(stepValue) || paramaters.defaultZoomIncrement || settings.defaultZoomIncrement;
 		const factorBase = 1 + step * 0.1;
@@ -192,7 +192,7 @@ export function initMapInteractions(
 	});
 
 	zoomOutBtn?.addEventListener("click", () => {
-		const stepInput = toolbar.querySelector(".fm-zoom-step") as HTMLInputElement;
+		const stepInput = toolbar.querySelector(".fm-zoom-step");
 		const stepValue = Number(stepInput?.value);
 		const step = Math.abs(stepValue) || paramaters.defaultZoomIncrement || settings.defaultZoomIncrement;
 		const factorBase = 1 + step * 0.1;
