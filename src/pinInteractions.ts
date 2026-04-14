@@ -1,10 +1,10 @@
-import {App, CachedMetadata, MarkdownPostProcessorContext, MarkdownRenderer, Plugin, TFile, Component } from "obsidian";
+import {App, CachedMetadata, MarkdownPostProcessorContext, MarkdownRenderer, Plugin, normalizePath, TFile, Component } from "obsidian";
 import { FantasyMapSettings } from "./settings";
 import { FantasyMapParams } from "./paramaters";
 import { cancelMapPanning } from "./mapInteractions";
 import { showCustomPreview, hideCustomPreview, destroyCustomPreview } from "./previewInteractions"
 
-import pinIcon from "./assets/mapPinIcon_customizable.svg";
+import defaultPinIcon from "./assets/Pin.svg";
 
 export interface Pin {
 	note: TFile;
@@ -50,7 +50,7 @@ export async function initPinInteractions(
 		createPin(note);
 	}
 
-	function createPin(note: TFile){
+	async function createPin(note: TFile){
 		//#region parse and filter note front matter
 
 		// get the note front matter; if no front matter detected, skip the note
@@ -58,14 +58,14 @@ export async function initPinInteractions(
 		const frontMatter = cache?.frontmatter;
 		if (!frontMatter) return;
 
-		// if mapIDs parameter is set, only include notes with a matching fantasy-map-id in their front matter
+		// if mapIDs parameter is set, only include notes with a matching fm-id in their front matter
 		if (paramaters.mapIDs.length > 0 && paramaters.mapIDs[0] !== "") {
-			const mapId = frontMatter["fantasy-map-id"];
+			const mapId = frontMatter["fm-id"];
 			if (mapId !== undefined && !paramaters.mapIDs.includes(mapId)) return;
 		}
 
 		// get location from front matter and parse it; if no location or invalid format, skip the note
-		const frontMatterLc = frontMatter["fantasy-map-location"];
+		const frontMatterLc = frontMatter["fm-location"];
 		if (frontMatterLc === undefined) return;
 
 		const location = parseFormattedLocation(frontMatterLc);
@@ -88,8 +88,26 @@ export async function initPinInteractions(
 
 		// get the pin icon and add it to the pin element; set the width of the icon to 12px
 		const pinIconEl = element.createEl("div", { cls: "map-pin-icon" });
-		pinIconEl.innerHTML = pinIcon;
-		pinIconEl.style.width = `12px`;
+
+		const pinIconValue = frontMatter["fm-pin-icon"];
+		const pinFile = resolvePinIconFile(app, pinIconValue, ctx.sourcePath);
+		
+		const color = "--link-color";
+		
+		if (pinFile) {
+			if (pinFile.extension === "svg") {
+				pinIconEl.innerHTML = addSvgViewBoxPadding(await app.vault.cachedRead(pinFile), 2);
+			} else {
+				const url = app.vault.getResourcePath(pinFile);
+				pinIconEl.innerHTML = `<img src="${url}" alt="" />`;
+			}
+		} else {
+			pinIconEl.innerHTML = addSvgViewBoxPadding(defaultPinIcon, 2);
+		}
+		
+		const match = paramaters.pinSize.trim().match(/^([+-]?(?:\d+(?:\.\d+)?|\.\d+))%$/);
+		if (match) pinIconEl.style.width = `${Number(match[1]) * 0.01 * currentMap.width}px`;
+		else pinIconEl.style.width = paramaters.pinSize;
 		//#endregion
 		
 		const newPin = { note, element, location }
@@ -125,7 +143,7 @@ export async function initPinInteractions(
 				selectedPin.location = pxToLocation(px);
 				await app.fileManager.processFrontMatter(selectedPin.note, (frontmatter) => {
 					if (!selectedPin) return;
-					frontmatter["fantasy-map-location"] = formatLocation(selectedPin?.location);
+					frontmatter["fm-location"] = formatLocation(selectedPin?.location);
 				});
 			}
 			else {
@@ -146,6 +164,54 @@ export async function initPinInteractions(
 			updatePinPositions(currentMap.xOffset, currentMap.yOffset, currentMap.width, currentMap.height);
 		}
 	})
+}
+
+function resolvePinIconFile(
+	app: App,
+	value: unknown,
+	sourcePath: string
+): TFile | null {
+	if (typeof value !== "string") return null;
+
+	const raw = value.trim();
+	if (!raw) return null;
+
+	const normalized = raw.replace(/^\[\[|\]\]$/g, "").trim();
+	if (!normalized) return null;
+
+	const linked = app.metadataCache.getFirstLinkpathDest(normalized, sourcePath);
+	if (linked instanceof TFile) return linked;
+
+	const byPath = app.vault.getAbstractFileByPath(normalizePath(normalized));
+	if (byPath instanceof TFile) return byPath;
+
+	const files = app.vault.getFiles();
+	const lower = normalized.toLowerCase();
+
+	const supportedExts = new Set(["svg", "png", "jpg", "jpeg", "webp", "gif"]);
+
+	const exactName = files.find(f => f.name.toLowerCase() === lower);
+	if (exactName) return exactName;
+
+	const basenameMatches = files.filter(
+		f => f.basename.toLowerCase() === lower && supportedExts.has(f.extension.toLowerCase())
+	);
+
+	if (basenameMatches.length === 1) return basenameMatches[0] as TFile;
+
+	// Optional: prefer SVG if multiple matches exist
+	const svgMatch = basenameMatches.find(f => f.extension.toLowerCase() === "svg");
+	if (svgMatch) return svgMatch;
+
+	return basenameMatches[0] ?? null;
+}
+
+function addSvgViewBoxPadding(svg: string, pad: number): string {
+	return svg.replace(/viewBox="([^"]+)"/, (_, vb) => {
+		const [x, y, w, h] = vb.trim().split(/\s+/).map(Number);
+		if ([x, y, w, h].some(Number.isNaN)) return `viewBox="${vb}"`;
+		return `viewBox="${x - pad} ${y - pad} ${w + pad * 2} ${h + pad * 2}"`;
+	});
 }
 
 //#region Helper functions for translating between location and px coordinates, and handling mouse position and hover timeouts

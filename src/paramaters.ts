@@ -5,6 +5,7 @@ import { FantasyMapSettings } from "./settings";
 export interface FantasyMapParams {
 	map: string;
 	mapIDs: string[];
+	pinSize: string;
 	defaultZoomIncrement?: number;
 	defaultZoomLevel?: number;
 	defaultLocation?: [number, number];
@@ -19,6 +20,7 @@ export interface FantasyMapParams {
 // Help message strings for each parameter, which will be displayed when the user includes a help keyword in the value of any parameter; these messages provide detailed instructions on how to use each parameter and what values are accepted
 const mapHelpMessageString = "**\"Map\"** (**required**): The name of the map asset to display - supports relative paths, absolute paths, and bare filenames (e.g. \"World Map.svg\") - the file must be located somewhere in your vault - supported file types are SVG, PNG, JPG, JPEG, WEBP, and GIF"
 const mapIDsHelpMessageString = "**\"Map IDs\"** (optional): A comma-separated list of IDs that define which pins with the same ID can appear on the map (e.g. \"river, mountain\"); if not specified, all pins will be displayed on the map regardless of their ID";
+const pinSizeHelpMessageString = "**\"Pin Size\"** (optional): The size of the pins on the map. Specificaly the width of the pin element, (e.g. \"24px\", \"1.5em\", etc.) – default: \"24px\", can be adjusted in the plugin settings window";
 const defaultZoomIncrementHelpMessageString = "**\"Default Zoom Increment\"** (optional): The zoom increment amount – default: \"1\", can be adjusted in the plugin settings window";
 const defaultZoomLevelHelpMessageString = "**\"Default Zoom Level\"** (optional): The initial zoom level when the map is first loaded – default: \"1\"";
 const defaultLocationHelpMessageString = "**\"Default Location\"** (optional): The initial focused coordinates for the map on load \"(latitude, longitude)\" – default: \"(0, 0)\"";
@@ -48,7 +50,7 @@ function allHelpMessages(settings: FantasyMapSettings) : string[] {
 }
 
 // This string provides a template for users to copy and paste into their notes to create a new Fantasy-Map code block with all available parameters listed for easy reference
-export const fantasyMapCopyToClipboardString = [
+export const fantasyMapCodeBlockCopyToClipboardString = [
 	"```Fantasy-Map",
 	"Map:",
 	"MapIDs:",
@@ -62,6 +64,14 @@ export const fantasyMapCopyToClipboardString = [
 /*	"Unit Of Measurement:",*/
 /*	"Equatorial Circumference:",*/
 	"```"
+].join("\n");
+
+export const fantasyMapFrontMatterCopyToClipboardString = [
+	"---",
+	"fm-location: (lat, lng)", 
+	"fm-id:",
+	"fm-pin-icon:",
+	"---"
 ].join("\n");
 
 // Comprehensive list of affirmative values that will be interpreted as true for boolean parameters like "repeat"; this allows for a wide range of user inputs to enable the feature without requiring strict formatting
@@ -168,7 +178,7 @@ export function parseFantasyMapParams(source: string, element: HTMLElement, ctx:
 				// help message for the map parameter if the value contains any help keywords
 				if (checkForHelp(mapHelpMessageString)) break;
 				
-				if (value.trim().length == 0) addHelpMessage("<span class=\"fantasy-map-error\">Fantasy Map ERROR: map option is required!</span>") ;
+				if (value.trim().length == 0) addHelpMessage("<span class=\"fantasy-map-error\">Fantasy Map ERROR: map option is required!</span>");
 				
 				// set the name of the map to load; supports relative paths, absolute paths, and bare filenames (e.g. "World Map.svg") - the file must be located somewhere in your vault - supported file types are SVG, PNG, JPG, JPEG, WEBP, and GIF
 				params.map = value; 
@@ -183,6 +193,15 @@ export function parseFantasyMapParams(source: string, element: HTMLElement, ctx:
 				params.mapIDs = value.split(",").map(id => id.trim());
 				break;
 			
+			case "pinsize":
+				if (checkForHelp(pinSizeHelpMessageString)) break;
+
+				const trimmed = value.trim();
+				if (!isValidPinSize(trimmed)) addHelpMessage("<span class=\"fantasy-map-error\">Fantasy Map ERROR: Pin Size Value is invalid! Some examples of acceptable values are '24px', '5%'. This option utalizes css styles, specificaly the width property. </span>")
+				
+				params.pinSize = value;
+				break;
+				
 			// set the default zoom increment, defaulting to 1 if the value is not a valid number
 			case "defaultzoomincrement": 
 				
@@ -297,6 +316,7 @@ export function parseFantasyMapParams(source: string, element: HTMLElement, ctx:
 	}
 
 	// Defaults
+	if (params.pinSize == null) params.pinSize = settings.defaultPinSize;
 	if (params.defaultZoomIncrement == null) params.defaultZoomIncrement = settings.defaultZoomIncrement;
 	if (params.defaultZoomLevel == null) params.defaultZoomLevel = 1;
 	if (params.defaultLocation == null) params.defaultLocation = [0, 0];
@@ -310,6 +330,19 @@ export function parseFantasyMapParams(source: string, element: HTMLElement, ctx:
 	if (helpMessages.length > 0) fantasyMapHelpMessage(element, ctx, component, compileHelpMessages(helpMessages, "##### Fantasy Map Help Messages:"), true);
 	
 	return params as FantasyMapParams;
+}
+
+function isValidPinSize(value: string): boolean {
+	const trimmed = value.trim();
+	if (!trimmed) return false;
+
+	const el = document.createElement("div");
+	el.style.width = "";
+	el.style.width = trimmed;
+
+	const result = el.style.width !== "";
+	el.remove();
+	return result;
 }
 
 // Render a help message to markdown
@@ -330,7 +363,7 @@ export function appendCopyLink(container: HTMLElement) {
 	link.addEventListener("click", async (event) => {
 		event.preventDefault();
 		try {
-			await navigator.clipboard.writeText(fantasyMapCopyToClipboardString);
+			await navigator.clipboard.writeText(fantasyMapCodeBlockCopyToClipboardString);
 			link.setText("Copied!");
 			setTimeout(() => link.setText("Copy Fantasy-Map template"), 1500);
 		} catch (err) {

@@ -136,14 +136,14 @@
 	transform-origin: center bottom;
 	transform: translateX(-100%);
 	transition: transform 120ms ease, filter 120ms ease;
-	color: var(--interactive-normal);
+	fill: var(--text-accent);
 }
 
 .map-pin-icon svg:hover {
 	cursor: pointer;
 	transform: translate(-100%, -10%) scale(1.1);
 	filter: drop-shadow(0 0 2px rgba(0,0,0,0.5));
-	color: var(--interactive-hover);
+	fill: var(--text-accent-hover);
 }
 
 /* endregion */

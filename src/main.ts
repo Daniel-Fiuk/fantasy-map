@@ -95,7 +95,7 @@ export default class FantasyMap extends Plugin {
 		// load image to infer aspect and tile layout
 		const mapImg = new Image();
 		mapImg.src = mapUrl;
-		mapImg.onload = () => {
+		mapImg.onload = async () => {
 			const ratio = mapImg.naturalHeight / mapImg.naturalWidth;
 			(mapWrapper as any)._mapAspectRatio = ratio;
 
@@ -156,7 +156,7 @@ export default class FantasyMap extends Plugin {
 		const zoomInput = toolbar.createEl("input", {
 			cls: "fm-zoom-step",
 			type: "number",
-		}) as HTMLInputElement;
+		});
 		zoomInput.value = String(parameters.defaultZoomIncrement ?? this.settings.defaultZoomIncrement);
 		//#endregion
 	}
