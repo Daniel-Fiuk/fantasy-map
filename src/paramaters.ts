@@ -12,7 +12,6 @@ export interface FantasyMapParams {
 	latitudeRange?: [number, number];
 	longitudeRange?: [number, number];
 	longitudeOffset?: number;
-	equatorialCircumference?: number;
 }
 
 const mapHelpMessageString =
@@ -35,8 +34,6 @@ const longitudeRangeHelpMessageString =
 	"**\"Longitude Range\"** (optional): The longitude bounds as \"(min, max)\" – default: \"(0, 360)\"";
 const longitudeOffsetHelpMessageString =
 	"**\"Longitude Offset\"** (optional): Offset for longitude values – default: \"0\"";
-const equatorialCircumferenceHelpMessageString =
-	"**\"Equatorial Circumference\"** (optional): Custom equatorial circumference value – default: \"40075\" for Metric in kilometers, \"24901\" for Imperial in miles";
 const helpHelpMessageString =
 	"**\"Help, -H, Info, Instruction, -I, or Usage\"**: Include one of these keywords to display usage instructions";
 
@@ -67,13 +64,9 @@ export const fantasyMapCodeBlockCopyToClipboardString = [
 	"PinSize:",
 	"Default Zoom Increment:",
 	"Default Zoom Level:",
-	// "Default Location:",
 	"Repeat:",
 	"Latitude Range:",
 	"Longitude Range:",
-	// "Longitude Offset:",
-	// "Unit Of Measurement:",
-	// "Equatorial Circumference:",
 	"```",
 ].join("\n");
 
@@ -280,14 +273,7 @@ export function parseFantasyMapParams(
 				if (checkForHelp(longitudeOffsetHelpMessageString)) break;
 				params.longitudeOffset = Number(value) || 0;
 				break;
-
-			case "equatorialcircumference": {
-				if (checkForHelp(equatorialCircumferenceHelpMessageString)) break;
-				const num = Number(value.replace(/,/g, ""));
-				if (!isNaN(num)) params.equatorialCircumference = num;
-				break;
-			}
-
+				
 			default:
 				console.warn(`Unknown Fantasy Map parameter: "${rawKey}"`);
 				addHelpMessage(
@@ -307,10 +293,6 @@ export function parseFantasyMapParams(
 	if (params.latitudeRange == null) params.latitudeRange = [-90, 90];
 	if (params.longitudeRange == null) params.longitudeRange = [0, 360];
 	if (params.longitudeOffset == null) params.longitudeOffset = 0;
-	if (params.equatorialCircumference == null) {
-		params.equatorialCircumference =
-			params.unitOfMeasurement === "Metric" ? 40075 : 24901;
-	}
 
 	if (helpMessages.length > 0) {
 		void fantasyMapHelpMessage(

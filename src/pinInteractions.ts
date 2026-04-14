@@ -234,10 +234,10 @@ function resolvePinIconFile(
 	if (!normalized) return null;
 
 	const linked = app.metadataCache.getFirstLinkpathDest(normalized, sourcePath);
-	if (linked instanceof TFile) return linked;
+	if (linked instanceof TFile) return linked ?? null;
 
 	const byPath = app.vault.getAbstractFileByPath(normalizePath(normalized));
-	if (byPath instanceof TFile) return byPath;
+	if (byPath instanceof TFile) return byPath ?? null;
 
 	const files = app.vault.getFiles();
 	const lower = normalized.toLowerCase();
@@ -245,7 +245,7 @@ function resolvePinIconFile(
 	const supportedExts = new Set(["svg", "png", "jpg", "jpeg", "webp", "gif"]);
 
 	const exactName = files.find((f) => f.name.toLowerCase() === lower);
-	if (exactName && supportedExts.has(exactName.extension.toLowerCase())) return exactName;
+	if (exactName && supportedExts.has(exactName.extension.toLowerCase())) return exactName ?? null;
 
 	const basenameMatches = files.filter(
 		(f) =>
@@ -253,12 +253,12 @@ function resolvePinIconFile(
 			supportedExts.has(f.extension.toLowerCase())
 	);
 
-	if (basenameMatches.length === 1) return basenameMatches[0];
+	if (basenameMatches.length === 1) return basenameMatches[0] ?? null;
 
 	const svgMatch = basenameMatches.find(
 		(f) => f.extension.toLowerCase() === "svg"
 	);
-	if (svgMatch) return svgMatch;
+	if (svgMatch) return svgMatch ?? null;
 
 	return basenameMatches[0] ?? null;
 }
