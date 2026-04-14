@@ -1,10 +1,10 @@
 /* region map layout */
 
 .fantasy-map-container {
-	border-radius: 4px;
 	position: relative;
 	width: 100%;
 	overflow: hidden;
+	border-radius: 4px;
 }
 
 .fantasy-map-wrapper {
@@ -14,9 +14,8 @@
 	overflow: hidden;
 }
 
-/* background layer that tiles seamlessly */
 .fantasy-map-background {
-	position: relative;
+	position: absolute;
 	inset: 0;
 	width: 100%;
 	height: 100%;
@@ -26,11 +25,11 @@
 	z-index: 0;
 }
 
-/* tiles container and individual tiles */
 .fantasy-map-tiles {
 	position: absolute;
 	inset: 0;
 	transform-origin: top left;
+	z-index: 1;
 }
 
 .fm-tile {
@@ -40,26 +39,22 @@
 	background-position: 0 0;
 	background-repeat: no-repeat;
 	background-size: 100% 100%;
-	z-index: 1;
 }
 
 .fantasy-map-container,
 .fantasy-map-background,
 .fantasy-map-tiles,
 .fm-tile {
-	/* prevent image selection / text selection */
 	user-select: none;
 	-webkit-user-select: none;
 	-moz-user-select: none;
 	-ms-user-select: none;
 
-	/* prevent native drag image ghost */
 	-webkit-user-drag: none;
 	-khtml-user-drag: none;
 	-moz-user-drag: none;
 	user-drag: none;
 
-	/* hint that this area is for panning */
 	cursor: grab;
 }
 
@@ -69,22 +64,34 @@
 .fm-tile:active {
 	cursor: grabbing;
 }
+
 /* endregion */
 
 /* region toolbar */
 
 .fantasy-map-toolbar {
-	background-color: var(--background-secondary);
-	border: 1px solid var(--background-modifier-border);
-	border-radius: 4px;
-	display: flex;      /* ensure flexbox */
-	flex-direction: row;
-	gap: 5px;           /* 5px space between children */
-	padding: 5px;
 	position: absolute;
 	bottom: 5px;
 	left: 5px;
 	z-index: 10;
+
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	gap: 5px;
+	padding: 5px;
+
+	background-color: var(--background-secondary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 4px;
+
+	opacity: 0;
+	transition: opacity 150ms ease;
+}
+
+.fantasy-map-container:hover .fantasy-map-toolbar,
+.fantasy-map-container:focus-within .fantasy-map-toolbar {
+	opacity: 1;
 }
 
 .fantasy-map-toolbar button {
@@ -95,17 +102,6 @@
 .fantasy-map-toolbar input.fm-zoom-step {
 	width: 4rem;
 	font-size: 0.9rem;
-}
-
-/* base state: toolbar hidden */
-.fantasy-map-toolbar {
-	opacity: 0;
-	transition: opacity 150ms ease;
-}
-
-/* when hovering over the map container, show it */
-.fantasy-map-container:hover .fantasy-map-toolbar {
-	opacity: 1;
 }
 
 /* endregion */
@@ -126,23 +122,31 @@
 	height: auto;
 }
 
-.map-pin-icon svg {
+.map-pin-icon svg,
+.map-pin-icon img {
 	display: block;
-	position: absolute;
-	bottom: 0;
-	left: 50%;
 	width: 100%;
 	height: auto;
 	transform-origin: center bottom;
-	transform: translateX(-100%);
+	transform: translateX(-50%);
 	transition: transform 120ms ease, filter 120ms ease;
+}
+
+.map-pin-icon svg {
 	fill: var(--text-accent);
 }
 
-.map-pin-icon svg:hover {
+.map-pin-icon:hover {
 	cursor: pointer;
-	transform: translate(-100%, -10%) scale(1.1);
-	filter: drop-shadow(0 0 2px rgba(0,0,0,0.5));
+}
+
+.map-pin-icon:hover svg,
+.map-pin-icon:hover img {
+	transform: translateX(-50%) translateY(-10%) scale(1.1);
+	filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.5));
+}
+
+.map-pin-icon:hover svg {
 	fill: var(--text-accent-hover);
 }
 
@@ -152,19 +156,21 @@
 
 .fantasy-map-hover-preview {
 	position: fixed;
-	width: 520px;              /* or keep max-width if you prefer */
+	width: min(520px, calc(100vw - 24px));
 	max-height: 320px;
 	padding: 12px 14px;
 	border-radius: 8px;
+
 	background-color: var(--background-secondary);
-	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
 	color: var(--text-normal);
+	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+
 	opacity: 0;
 	pointer-events: none;
 	transform: translateY(4px);
 	transition: opacity 120ms ease, transform 120ms ease;
 	z-index: 9999;
-	overflow: hidden;          /* clip anything outside */
+	overflow: hidden;
 }
 
 .fantasy-map-hover-preview.is-visible {
@@ -173,25 +179,24 @@
 	transform: translateY(0);
 }
 
-.fantasy-map-hover-preview .fm-hover-title {
-	font-size: var(--h1-size);          /* same as H1 */
-	font-weight: var(--h1-weight, 700); /* fallback if var not defined */
-	text-decoration: none;
-	display: inline-block;
-	margin: 0;
-}
-
-/* Optional: make internal links in the preview clickable */
-.fantasy-map-hover-preview a.internal-link {
-	text-decoration: underline;
-}
-
-/* header stays fixed at top */
 .fm-hover-header {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
 	margin-bottom: 6px;
+	gap: 8px;
+}
+
+.fantasy-map-hover-preview .fm-hover-title {
+	display: inline-block;
+	margin: 0;
+	font-size: var(--h1-size);
+	font-weight: var(--h3-weight, 700);
+	text-decoration: none;
+}
+
+.fantasy-map-hover-preview a.internal-link {
+	text-decoration: underline;
 }
 
 .fm-hover-open {
@@ -205,20 +210,20 @@
 }
 
 .fm-hover-content {
-	max-height: 260px;         /* 320 - header & padding */
-	overflow-y: auto;          /* vertical scrollbar when needed */
+	max-height: 260px;
+	overflow-y: auto;
 	font-size: 0.9rem;
 	line-height: 1.4;
-	padding-right: 4px;        /* room for scrollbar */
+	padding-right: 4px;
 }
 
 .fantasy-map-hover-preview .fm-hover-content img,
 .fantasy-map-hover-preview .fm-hover-content svg,
 .fantasy-map-hover-preview .fm-hover-content video,
 .fantasy-map-hover-preview .fm-hover-content .internal-embed img {
+	display: block;
 	max-width: 100%;
 	height: auto;
-	display: block;
 }
 
 .fantasy-map-hover-preview .fm-hover-content .internal-embed,
@@ -230,5 +235,5 @@
 .fantasy-map-hover-preview .fm-hover-content p {
 	overflow-wrap: anywhere;
 }
-/* endregion */
 
+/* endregion */

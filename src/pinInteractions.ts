@@ -1,10 +1,34 @@
-import {App, CachedMetadata, MarkdownPostProcessorContext, MarkdownRenderer, Plugin, normalizePath, TFile, Component } from "obsidian";
-import { FantasyMapSettings } from "./settings";
+import {
+	App,
+	Component,
+	MarkdownPostProcessorContext,
+	normalizePath,
+	TFile,
+} from "obsidian";
 import { FantasyMapParams } from "./paramaters";
 import { cancelMapPanning } from "./mapInteractions";
-import { showCustomPreview, hideCustomPreview, destroyCustomPreview } from "./previewInteractions"
+import {
+	showCustomPreview,
+	hideCustomPreview,
+	destroyCustomPreview,
+} from "./previewInteractions";
 
 import defaultPinIcon from "./assets/Pin.svg";
+
+interface Location {
+	lat: number;
+	lng: number;
+}
+
+interface Position {
+	left: number;
+	top: number;
+}
+
+interface FormattedPosition {
+	left: string;
+	top: string;
+}
 
 export interface Pin {
 	note: TFile;
@@ -13,159 +37,187 @@ export interface Pin {
 }
 
 const Pins: Pin[] = [];
-var selectedPin: Pin | null = null;
-var enablePinDrag = false;
-var disablePreviews = false;
-var latBounds: { min: number, max: number } = { min: 0, max: 0 };
-var lngBounds: { min: number, max: number } = { min: 0, max: 0 };
+let selectedPin: Pin | null = null;
+let enablePinDrag = false;
+let disablePreviews = false;
 
-var currentMap: { width: number, height: number, xOffset: number, yOffset: number } = { width: 0, height: 0, xOffset: 0, yOffset: 0 };
+let latBounds: { min: number; max: number } = { min: 0, max: 0 };
+let lngBounds: { min: number; max: number } = { min: 0, max: 0 };
+
+let currentMap: { width: number; height: number; xOffset: number; yOffset: number } = {
+	width: 0,
+	height: 0,
+	xOffset: 0,
+	yOffset: 0,
+};
+
+let timeOut: number | null = null;
 
 export async function initPinInteractions(
 	app: App,
 	component: Component,
 	wrapper: HTMLElement,
 	paramaters: FantasyMapParams,
-	settings: FantasyMapSettings,
 	element: HTMLElement,
-	ctx: MarkdownPostProcessorContext,
+	ctx: MarkdownPostProcessorContext
 ) {
-	
 	disablePreviews = false;
-	
-	// collect all notes that contain fantasy map front matter and store them in pins
+	Pins.length = 0;
+
 	const notes = app.vault.getMarkdownFiles();
-	
+
 	currentMap.width = wrapper.clientWidth;
 	currentMap.height = wrapper.clientHeight;
-	
+
 	if (paramaters.latitudeRange == null || paramaters.longitudeRange == null) return;
-	
-	// define the map latitude and longitude bounds
-	latBounds = { min: paramaters.latitudeRange[0], max: paramaters.latitudeRange[1] };
-	lngBounds = { min: paramaters.longitudeRange[0], max: paramaters.longitudeRange[1] };
-	
-	// iterate through all note files to find all location relavent notes to attach to the map
+
+	latBounds = {
+		min: paramaters.latitudeRange[0],
+		max: paramaters.latitudeRange[1],
+	};
+	lngBounds = {
+		min: paramaters.longitudeRange[0],
+		max: paramaters.longitudeRange[1],
+	};
+
 	for (const note of notes) {
-		createPin(note);
+		await createPin(note);
 	}
 
-	async function createPin(note: TFile){
-		//#region parse and filter note front matter
-
-		// get the note front matter; if no front matter detected, skip the note
-		const cache = app.metadataCache.getFileCache(note);
-		const frontMatter = cache?.frontmatter;
-		if (!frontMatter) return;
-
-		// if mapIDs parameter is set, only include notes with a matching fm-id in their front matter
-		if (paramaters.mapIDs.length > 0 && paramaters.mapIDs[0] !== "") {
-			const mapId = frontMatter["fm-id"];
-			if (mapId !== undefined && !paramaters.mapIDs.includes(mapId)) return;
-		}
-
-		// get location from front matter and parse it; if no location or invalid format, skip the note
-		const frontMatterLc = frontMatter["fm-location"];
-		if (frontMatterLc === undefined) return;
-
-		const location = parseFormattedLocation(frontMatterLc);
-		if (!location) return;
-		
-		// skip locations that are outside the map bounds 
-		if (location.lat < latBounds.min || location.lat > latBounds.max || location.lng < lngBounds.min || location.lng > lngBounds.max) return;
-
-		//#endregion
-
-		//#region create pin icon
-
-		const element = wrapper.createEl("div", { cls: "map-pin" });
-		//attachPinHoverBehaviour(this, pin, app); !!
-
-		// translate the location's latitude and longitude to a px of the map bounds for CSS positioning and apply them to the pin element
-		const formattedPx = formatPx(locationToPx(location));
-		element.setCssStyles({
-			left: formattedPx.left,
-			top: formattedPx.top
-		});
-
-		// get the pin icon and add it to the pin element; set the width of the icon to 12px
-		const pinIconEl = element.createEl("div", { cls: "map-pin-icon" });
-
-		const pinIconValue = frontMatter["fm-pin-icon"];
-		const pinFile = resolvePinIconFile(app, pinIconValue, ctx.sourcePath);
-		
-		const color = "--link-color";
-		
-		if (pinFile) {
-			if (pinFile.extension === "svg") {
-				pinIconEl.innerHTML = addSvgViewBoxPadding(await app.vault.cachedRead(pinFile), 2);
-			} else {
-				const url = app.vault.getResourcePath(pinFile);
-				pinIconEl.innerHTML = `<img src="${url}" alt="" />`;
-			}
-		} else {
-			pinIconEl.innerHTML = addSvgViewBoxPadding(defaultPinIcon, 2);
-		}
-		
-		const match = paramaters.pinSize.trim().match(/^([+-]?(?:\d+(?:\.\d+)?|\.\d+))%$/);
-		if (match) pinIconEl.setCssStyles({ width: `${Number(match[1]) * 0.01 * currentMap.width}px` });
-		else pinIconEl.setCssStyles({ width: paramaters.pinSize });
-		//#endregion
-		
-		const newPin = { note, element, location }
-		initPinActions(newPin, app, component);
-		Pins.push(newPin);
-	}
-	
 	wrapper.addEventListener("pointermove", (e) => {
 		if (!selectedPin) return;
-		
+
 		if (!enablePinDrag) {
 			selectedPin = null;
 			return;
 		}
-		
+
 		const formattedPx = formatPx(mouseToPx(e, wrapper.getBoundingClientRect()));
 		selectedPin.element.setCssStyles({
 			left: formattedPx.left,
-			top: formattedPx.top
+			top: formattedPx.top,
 		});
 	});
-	
+
 	wrapper.addEventListener("pointerup", async (e) => {
-		if (!selectedPin || selectedPin == null) return;
-		
-		if (selectedPin.note) {
-			if (enablePinDrag) {
-				const px = mouseToPx(e, wrapper.getBoundingClientRect());
+		if (!selectedPin) return;
 
-				px.left = wrapValue(px.left - currentMap.xOffset, currentMap.width);
-				px.top = wrapValue(px.top - currentMap.yOffset, currentMap.height);
+		if (enablePinDrag) {
+			const px = mouseToPx(e, wrapper.getBoundingClientRect());
 
-				selectedPin.location = pxToLocation(px);
-				await app.fileManager.processFrontMatter(selectedPin.note, (frontmatter) => {
-					if (!selectedPin) return;
-					frontmatter["fm-location"] = formatLocation(selectedPin?.location);
-				});
-			}
-			else {
-				disablePreviews = true;
-				destroyCustomPreview();
-				app.workspace.openLinkText(selectedPin.note.path, "", false);
-			}
+			px.left = wrapValue(px.left - currentMap.xOffset, currentMap.width);
+			px.top = wrapValue(px.top - currentMap.yOffset, currentMap.height);
+
+			selectedPin.location = pxToLocation(px);
+
+			const pinToUpdate = selectedPin;
+			await app.fileManager.processFrontMatter(pinToUpdate.note, (frontmatter) => {
+				frontmatter["fm-location"] = formatLocation(pinToUpdate.location);
+			});
+		} else {
+			disablePreviews = true;
+			destroyCustomPreview();
+			app.workspace.openLinkText(selectedPin.note.path, "", false);
 		}
 
 		enablePinDrag = false;
 		selectedPin = null;
-	})
-	
-	wrapper.addEventListener("pointerleave", (e) => {
-		if (enablePinDrag){
+	});
+
+	wrapper.addEventListener("pointerleave", () => {
+		if (enablePinDrag) {
 			enablePinDrag = false;
 			selectedPin = null;
-			updatePinPositions(currentMap.xOffset, currentMap.yOffset, currentMap.width, currentMap.height);
+			updatePinPositions(
+				currentMap.xOffset,
+				currentMap.yOffset,
+				currentMap.width,
+				currentMap.height
+			);
 		}
-	})
+	});
+
+	async function createPin(note: TFile) {
+		const cache = app.metadataCache.getFileCache(note);
+		const frontMatter = cache?.frontmatter;
+		if (!frontMatter) return;
+
+		const mapIDs = paramaters.mapIDs ?? [];
+		if (mapIDs.length > 0 && mapIDs[0] !== "") {
+			const mapId = frontMatter["fm-id"];
+			if (mapId !== undefined && !mapIDs.includes(String(mapId))) return;
+		}
+
+		const frontMatterLocation = frontMatter["fm-location"];
+		if (frontMatterLocation === undefined) return;
+
+		const location = parseFormattedLocation(String(frontMatterLocation));
+		if (!location) return;
+
+		if (
+			location.lat < latBounds.min ||
+			location.lat > latBounds.max ||
+			location.lng < lngBounds.min ||
+			location.lng > lngBounds.max
+		) {
+			return;
+		}
+
+		const pinElement = wrapper.createEl("div", { cls: "map-pin" });
+
+		const formattedPx = formatPx(locationToPx(location));
+		pinElement.setCssStyles({
+			left: formattedPx.left,
+			top: formattedPx.top,
+		});
+
+		const pinIconEl = pinElement.createEl("div", { cls: "map-pin-icon" });
+
+		const pinIconValue = frontMatter["fm-pin-icon"];
+		const pinFile = resolvePinIconFile(app, pinIconValue, ctx.sourcePath);
+
+		if (pinFile) {
+			if (pinFile.extension.toLowerCase() === "svg") {
+				pinIconEl.innerHTML = addSvgViewBoxPadding(
+					await app.vault.cachedRead(pinFile),
+					2
+				);
+			} else {
+				const url = app.vault.getResourcePath(pinFile);
+				pinIconEl.createEl("img", {
+					attr: {
+						src: url,
+						alt: "",
+					},
+				});
+			}
+		} else {
+			pinIconEl.innerHTML = addSvgViewBoxPadding(defaultPinIcon, 2);
+		}
+
+		const match = paramaters.pinSize.trim().match(
+			/^([+-]?(?:\d+(?:\.\d+)?|\.\d+))%$/
+		);
+
+		if (match) {
+			pinIconEl.setCssStyles({
+				width: `${Number(match[1]) * 0.01 * currentMap.width}px`,
+			});
+		} else {
+			pinIconEl.setCssStyles({
+				width: paramaters.pinSize,
+			});
+		}
+
+		const newPin: Pin = {
+			note,
+			element: pinElement,
+			location,
+		};
+
+		initPinActions(newPin, app, component);
+		Pins.push(newPin);
+	}
 }
 
 function resolvePinIconFile(
@@ -192,17 +244,20 @@ function resolvePinIconFile(
 
 	const supportedExts = new Set(["svg", "png", "jpg", "jpeg", "webp", "gif"]);
 
-	const exactName = files.find(f => f.name.toLowerCase() === lower);
-	if (exactName) return exactName;
+	const exactName = files.find((f) => f.name.toLowerCase() === lower);
+	if (exactName && supportedExts.has(exactName.extension.toLowerCase())) return exactName;
 
 	const basenameMatches = files.filter(
-		f => f.basename.toLowerCase() === lower && supportedExts.has(f.extension.toLowerCase())
+		(f) =>
+			f.basename.toLowerCase() === lower &&
+			supportedExts.has(f.extension.toLowerCase())
 	);
 
-	if (basenameMatches.length === 1) return basenameMatches[0] as TFile;
+	if (basenameMatches.length === 1) return basenameMatches[0];
 
-	// Optional: prefer SVG if multiple matches exist
-	const svgMatch = basenameMatches.find(f => f.extension.toLowerCase() === "svg");
+	const svgMatch = basenameMatches.find(
+		(f) => f.extension.toLowerCase() === "svg"
+	);
 	if (svgMatch) return svgMatch;
 
 	return basenameMatches[0] ?? null;
@@ -216,33 +271,30 @@ function addSvgViewBoxPadding(svg: string, pad: number): string {
 	});
 }
 
-//#region Helper functions for translating between location and px coordinates, and handling mouse position and hover timeouts
-
-interface Location { lat: number; lng: number }
-interface Position { left: number; top: number }
-interface FormattedPosition { left: string; top: string }
-
-//#region functions to format and parse location and px coordinates for use between css styles and front matter
-
 function formatLocation(location: Location): string {
 	return `(${location.lat.toFixed(4)}, ${location.lng.toFixed(4)})`;
 }
 
 function parseFormattedLocation(formattedLocation: string): Location | null {
-	const locationRegex = formattedLocation.match(/\(\s*([+-]?\d+(?:\.\d+)?)\s*,\s*([+-]?\d+(?:\.\d+)?)\s*\)/);
-	if (!locationRegex) return null;
+	const match = formattedLocation.match(
+		/\(\s*([+-]?\d+(?:\.\d+)?)\s*,\s*([+-]?\d+(?:\.\d+)?)\s*\)/
+	);
+	if (!match) return null;
 
-	const location = { lat: Number(locationRegex[1]), lng: Number(locationRegex[2])}
-	if (!location || Number.isNaN(location.lat) || Number.isNaN(location.lng)) return null;
+	const location = {
+		lat: Number(match[1]),
+		lng: Number(match[2]),
+	};
 
+	if (Number.isNaN(location.lat) || Number.isNaN(location.lng)) return null;
 	return location;
 }
 
-function formatPx(px: Position): FormattedPosition{
+function formatPx(px: Position): FormattedPosition {
 	return {
 		left: `${px.left}px`,
 		top: `${px.top}px`,
-	}
+	};
 }
 
 function parseFormattedPx(formattedPx: FormattedPosition): Position | null {
@@ -252,79 +304,70 @@ function parseFormattedPx(formattedPx: FormattedPosition): Position | null {
 
 	return {
 		left: Number(leftMatch[1]),
-		top: Number(topMatch[1])
-	}
+		top: Number(topMatch[1]),
+	};
 }
 
-//#endregion
-
-//#region functions to translate between location and px coordinates, and handle mouse position
-
-function locationToPx(locVal: Location) : Position {
+function locationToPx(locVal: Location): Position {
 	return {
-		left: (locVal.lng - lngBounds.min) / (lngBounds.max - lngBounds.min) * currentMap.width,
-		top: (-locVal.lat - latBounds.min) / (latBounds.max - latBounds.min) * currentMap.height
-	}
+		left:
+			((locVal.lng - lngBounds.min) / (lngBounds.max - lngBounds.min)) *
+			currentMap.width,
+		top:
+			((-locVal.lat - latBounds.min) / (latBounds.max - latBounds.min)) *
+			currentMap.height,
+	};
 }
 
 function pxToLocation(px: Position): Location {
 	return {
 		lat: -(px.top / currentMap.height * (latBounds.max - latBounds.min) + latBounds.min),
-		lng: px.left / currentMap.width * (lngBounds.max - lngBounds.min) + lngBounds.min
-	}
-}
-
-function mouseToLocation(event: MouseEvent, rect: DOMRect): Location {
-	const px = mouseToPx(event, rect);
-	return pxToLocation(px);
+		lng: px.left / currentMap.width * (lngBounds.max - lngBounds.min) + lngBounds.min,
+	};
 }
 
 function mouseToPx(event: MouseEvent, rect: DOMRect): Position {
 	return {
-		left: (event.clientX - rect.left),
-		top: (event.clientY - rect.top)
-	}
+		left: event.clientX - rect.left,
+		top: event.clientY - rect.top,
+	};
 }
-
-//#endregion
 
 function wrapValue(n: number, m: number) {
 	return ((n % m) + m) % m;
 }
 
-export function updatePinPositions(offsetX: number, offsetY: number, tileWidth: number, tileHeight: number) {
-	if (Pins == undefined || Pins == null) return;
-
+export function updatePinPositions(
+	offsetX: number,
+	offsetY: number,
+	tileWidth: number,
+	tileHeight: number
+) {
 	currentMap.width = tileWidth;
 	currentMap.height = tileHeight;
 	currentMap.xOffset = offsetX;
 	currentMap.yOffset = offsetY;
-	
+
 	for (const pin of Pins) {
-		if (pin == selectedPin) continue;
-		
+		if (pin === selectedPin) continue;
+
 		const px = locationToPx(pin.location);
-		
-		const formattedPx = {
-			left: `${wrapValue(px.left + offsetX, tileWidth)}px`,
-			top: `${wrapValue(px.top + offsetY, tileHeight)}px`
-		}
 
 		pin.element.setCssStyles({
-			top: formattedPx.top,
-			left: formattedPx.left
+			left: `${wrapValue(px.left + offsetX, tileWidth)}px`,
+			top: `${wrapValue(px.top + offsetY, tileHeight)}px`,
 		});
 	}
 }
 
-var timeOut: number | null = null;
-
-export function startTimeOut(time: number, callback: () => void){
+export function startTimeOut(time: number, callback: () => void) {
 	clearTimeOut();
-	timeOut = window.setTimeout(() => { callback(); }, time);
+	timeOut = window.setTimeout(() => {
+		callback();
+	}, time);
 }
 
-export function clearTimeOut(){
+export function clearTimeOut() {
 	if (timeOut !== null) {
 		window.clearTimeout(timeOut);
 		timeOut = null;
@@ -334,28 +377,26 @@ export function clearTimeOut(){
 function initPinActions(pin: Pin, app: App, component: Component) {
 	pin.element.addEventListener("pointerenter", (e) => {
 		if (selectedPin || disablePreviews) return;
-		startTimeOut(100, () => {showCustomPreview(pin, app, component, e)} );
+		startTimeOut(100, () => {
+			showCustomPreview(pin, app, component, e);
+		});
 	});
 
-	// Close custom preview on mouse leave
-	pin.element.addEventListener("pointerleave", (e) => {
+	pin.element.addEventListener("pointerleave", () => {
 		startTimeOut(750, () => {
 			hideCustomPreview();
 		});
 	});
 
-	pin.element.addEventListener("pointerdown", (e) => {
-		if (selectedPin) return; // already moving a pin, ignore new pointerdown events until current pin is released
+	pin.element.addEventListener("pointerdown", () => {
+		if (selectedPin) return;
+
 		selectedPin = pin;
-		
 		hideCustomPreview();
+
 		startTimeOut(100, () => {
 			cancelMapPanning();
 			enablePinDrag = true;
 		});
 	});
 }
-
-//#endregion
-
-

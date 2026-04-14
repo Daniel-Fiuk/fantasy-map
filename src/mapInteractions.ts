@@ -11,9 +11,9 @@ export interface PanZoomState {
 	maxZoom: number;
 }
 
-let isPanning: boolean = false;
-let lastX: number = 0;
-let lastY: number = 0;
+let isPanning = false;
+let lastX = 0;
+let lastY = 0;
 
 export function initMapInteractions(
 	app: App,
@@ -25,35 +25,29 @@ export function initMapInteractions(
 	settings: FantasyMapSettings
 ) {
 	const state: PanZoomState = {
-		zoom: 1,
+		zoom: paramaters.defaultZoomLevel || 1,
 		offsetX: 0,
 		offsetY: 0,
 		minZoom: 1,
-		maxZoom: 15
+		maxZoom: 15,
 	};
 
-	wrapper;
-	
 	function applyTransform() {
-		// size of one world tile in screen space at current zoom
 		const tileWidth = wrapper.clientWidth * state.zoom;
 		const tileHeight = wrapper.clientHeight * state.zoom;
 
-		// wrap offsets so tiles never drift far off screen
 		const wrappedX = (state.offsetX % tileWidth) - tileWidth;
 		const wrappedY = (state.offsetY % tileHeight) - tileHeight;
 
-		// tiles: transform via CSS scale/translate
 		tilesLayer.setCssStyles({
 			transform: `translate(${wrappedX}px, ${wrappedY}px) scale(${state.zoom})`,
-			transformOrigin: "top left"
+			transformOrigin: "top left",
 		});
 
-		// background: matching zoom/pan via background-size/position
 		bgLayer.setCssStyles({
 			backgroundSize: `${100 * state.zoom}% auto`,
-			backgroundPosition: `${wrappedX}px ${wrappedY}px`
-		})
+			backgroundPosition: `${wrappedX}px ${wrappedY}px`,
+		});
 
 		updatePinPositions(state.offsetX, state.offsetY, tileWidth, tileHeight);
 	}
@@ -67,27 +61,24 @@ export function initMapInteractions(
 		const worldH = viewH * state.zoom;
 
 		const repeat = paramaters.repeat ?? "no-repeat";
-		
-		let minX = - (worldW - viewW);
+
+		let minX = -(worldW - viewW);
 		let maxX = 0;
-		let minY = - (worldH - viewH);
+		let minY = -(worldH - viewH);
 		let maxY = 0;
 
 		switch (repeat) {
 			case "repeat-x":
-				// infinite horizontally, clamped vertically
 				minX = -Infinity;
 				maxX = Infinity;
 				break;
 			case "repeat-y":
-				// infinite vertically, clamped horizontally
 				minY = -Infinity;
 				maxY = Infinity;
 				break;
 			case "repeat":
 			case "space":
 			case "round":
-				// infinite both directions
 				minX = -Infinity;
 				maxX = Infinity;
 				minY = -Infinity;
@@ -95,12 +86,15 @@ export function initMapInteractions(
 				break;
 			case "no-repeat":
 			default:
-				// clamped both directions
 				break;
 		}
 
-		if (Number.isFinite(minX)) state.offsetX = Math.max(minX, Math.min(maxX, state.offsetX));
-		if (Number.isFinite(minY)) state.offsetY = Math.max(minY, Math.min(maxY, state.offsetY));
+		if (Number.isFinite(minX)) {
+			state.offsetX = Math.max(minX, Math.min(maxX, state.offsetX));
+		}
+		if (Number.isFinite(minY)) {
+			state.offsetY = Math.max(minY, Math.min(maxY, state.offsetY));
+		}
 	}
 
 	function reset() {
@@ -131,51 +125,57 @@ export function initMapInteractions(
 		clampOffsets();
 		applyTransform();
 	}
-	
+
 	wrapper.addEventListener("pointerdown", (e) => {
 		if (toolbar.contains(e.target as Node)) return;
-		
+
 		isPanning = true;
-		
+
 		lastX = e.clientX;
 		lastY = e.clientY;
-		
+
 		wrapper.setPointerCapture(e.pointerId);
 	});
 
 	wrapper.addEventListener("pointermove", (e) => {
-		if (!isPanning) {
-			wrapper.releasePointerCapture(e.pointerId);
-			return;
-		}
-		
+		if (!isPanning) return;
+
 		const dx = e.clientX - lastX;
 		const dy = e.clientY - lastY;
-		
+
 		lastX = e.clientX;
 		lastY = e.clientY;
-		
+
 		state.offsetX += dx;
 		state.offsetY += dy;
-		
+
 		clampOffsets();
 		applyTransform();
 	});
-	
-	wrapper.addEventListener("pointerup", (e) => { cancelMapPanning(); });
 
-	wrapper.addEventListener("wheel", (e) => {
-		e.preventDefault();
-		const zoomStep = toolbar.querySelector(".fm-zoom-step") as HTMLInputElement;
-		const zoomValue = Number(zoomStep.value);
-		const factor = e.deltaY < 0 ? (1 + zoomValue * 0.1) : 1 / (1 + zoomValue * 0.1);
-		zoomAt(e.clientX, e.clientY, factor);
-	}, { passive: false });
-	
-	const zoomInBtn = toolbar.querySelector(".fm-zoom-in") as HTMLButtonElement;
-	const zoomOutBtn = toolbar.querySelector(".fm-zoom-out") as HTMLButtonElement;
-	const resetBtn = toolbar.querySelector(".fm-reset") as HTMLButtonElement;
-	
+	wrapper.addEventListener("pointerup", () => {
+		cancelMapPanning();
+	});
+
+	wrapper.addEventListener(
+		"wheel",
+		(e) => {
+			e.preventDefault();
+
+			const zoomStep = toolbar.querySelector(".fm-zoom-step") as HTMLInputElement;
+			const zoomValue = Number(zoomStep?.value);
+			const base = 1 + (isNaN(zoomValue) ? settings.defaultZoomIncrement : zoomValue) * 0.1;
+
+			const factor = e.deltaY < 0 ? base : 1 / base;
+			zoomAt(e.clientX, e.clientY, factor);
+		},
+		{ passive: false }
+	);
+
+	const zoomInBtn = toolbar.querySelector(".fm-zoom-in") as HTMLButtonElement | null;
+	const zoomOutBtn = toolbar.querySelector(".fm-zoom-out") as HTMLButtonElement | null;
+	const resetBtn = toolbar.querySelector(".fm-reset") as HTMLButtonElement | null;
+
 	function zoomAtViewportCenter(zoomFactor: number) {
 		const rect = wrapper.getBoundingClientRect();
 		const cx = rect.left + rect.width / 2;
@@ -200,7 +200,7 @@ export function initMapInteractions(
 	});
 
 	resetBtn?.addEventListener("click", () => reset());
-	
+
 	reset();
 }
 

@@ -1,7 +1,7 @@
 import { Pin, clearTimeOut } from "./pinInteractions";
-import { App, Component, MarkdownRenderer, TFile } from "obsidian";
+import { App, Component, MarkdownRenderer } from "obsidian";
 
-var currentPreview: HTMLElement | null = null;
+let currentPreview: HTMLElement | null = null;
 
 export async function showCustomPreview(
 	pin: Pin,
@@ -10,7 +10,9 @@ export async function showCustomPreview(
 	event: MouseEvent
 ) {
 	if (!currentPreview) {
-		currentPreview = document.body.createDiv({ cls: "fantasy-map-hover-preview" });
+		currentPreview = document.body.createDiv({
+			cls: "fantasy-map-hover-preview",
+		});
 		attachPreviewHoverHandlers();
 	}
 
@@ -23,12 +25,21 @@ export async function showCustomPreview(
 		cls: "internal-link fm-hover-title",
 		text: pin.note.basename,
 	});
+
 	titleLink.setAttr("href", pin.note.path);
-	titleLink.dataset.href = app.metadataCache.fileToLinktext(pin.note, pin.note.path);
+	titleLink.dataset.href = app.metadataCache.fileToLinktext(
+		pin.note,
+		pin.note.path
+	);
+
 	titleLink.onclick = (e) => {
 		e.preventDefault();
 		e.stopPropagation();
-		app.workspace.openLinkText(pin.note.path, pin.note.path, e.ctrlKey || e.metaKey);
+		app.workspace.openLinkText(
+			pin.note.path,
+			pin.note.path,
+			e.ctrlKey || e.metaKey
+		);
 	};
 
 	const contentEl = container.createDiv({ cls: "fm-hover-content" });
@@ -52,7 +63,7 @@ export async function showCustomPreview(
 		top: `${rect.bottom + 8}px`,
 		left: `${rect.left}px`,
 	});
-	
+
 	container.addClass("is-visible");
 }
 
@@ -69,12 +80,14 @@ export function destroyCustomPreview() {
 	}
 }
 
-// helper: remove YAML frontmatter if present
 function stripFrontmatter(text: string): string {
 	if (text.startsWith("---")) {
 		const end = text.indexOf("\n---", 3);
-		if (end !== -1) return text.slice(end + 4);
+		if (end !== -1) {
+			return text.slice(end + 4).trimStart();
+		}
 	}
+
 	return text;
 }
 
@@ -90,7 +103,11 @@ function attachPreviewHoverHandlers() {
 	};
 }
 
-function wirePreviewLinks(container: HTMLElement, app: App, sourcePath: string) {
+function wirePreviewLinks(
+	container: HTMLElement,
+	app: App,
+	sourcePath: string
+) {
 	const internalLinks = container.querySelectorAll("a.internal-link");
 
 	internalLinks.forEach((linkEl) => {
