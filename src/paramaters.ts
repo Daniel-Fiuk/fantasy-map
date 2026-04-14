@@ -1,4 +1,4 @@
-import { Component, MarkdownPostProcessorContext, MarkdownRenderer, Notice } from "obsidian";
+import { App, Component, MarkdownPostProcessorContext, MarkdownRenderer, Notice } from "obsidian";
 import { FantasyMapSettings } from "./settings";
 
 export interface FantasyMapParams {
@@ -130,11 +130,12 @@ export function parseFantasyMapParams(
 
 	if (lines.length === 0) {
 		void fantasyMapHelpMessage(
+			app,
 			element,
-			ctx,
-			component,
 			compileHelpMessages(allHelpMessages(settings), "##### Available Fantasy Map Parameters:"),
-			true
+			true,
+			ctx.sourcePath,
+			component
 		);
 	}
 
@@ -291,11 +292,12 @@ export function parseFantasyMapParams(
 
 	if (helpMessages.length > 0) {
 		void fantasyMapHelpMessage(
+			app,
 			element,
-			ctx,
-			component,
 			compileHelpMessages(helpMessages, "##### Fantasy Map Help Messages:"),
-			true
+			true,
+			ctx.sourcePath,
+			component
 		);
 	}
 
@@ -318,16 +320,17 @@ export function isValidPinSize(value: string): boolean {
 }
 
 export async function fantasyMapHelpMessage(
+	app: App,
 	element: HTMLElement,
-	ctx: MarkdownPostProcessorContext,
-	component: Component,
 	message: string | null,
-	includeCopyLink: boolean = false
+	includeCopyLink: boolean = false,
+	sourcePath: string,
+	component: Component,
 ) {
 	if (message == null) return;
 
 	const container = element.createDiv();
-	await MarkdownRenderer.render(message, container, ctx.sourcePath, component);
+	await MarkdownRenderer.render(app, message, container, sourcePath, component);
 
 	if (includeCopyLink) appendCopyLink(container);
 }
