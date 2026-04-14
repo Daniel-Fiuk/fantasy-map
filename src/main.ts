@@ -43,6 +43,7 @@ export default class FantasyMap extends Plugin {
 
 	async main(source: string, element: HTMLElement, ctx: MarkdownPostProcessorContext) {
 		const parameters = parseFantasyMapParams(
+			this.app,
 			source,
 			element,
 			ctx,

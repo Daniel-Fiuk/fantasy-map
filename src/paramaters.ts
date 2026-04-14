@@ -114,6 +114,7 @@ const helpKeywords = [
 ];
 
 export function parseFantasyMapParams(
+	app: App,
 	source: string,
 	element: HTMLElement,
 	ctx: MarkdownPostProcessorContext,
