@@ -125,6 +125,8 @@
 .map-pin-icon svg,
 .map-pin-icon img {
 	display: block;
+	position: absolute;
+	bottom: 0;
 	width: 100%;
 	height: auto;
 	transform-origin: center bottom;

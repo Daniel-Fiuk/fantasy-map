@@ -339,8 +339,12 @@ export async function fantasyMapHelpMessage(
 export function appendCopyLink(container: HTMLElement) {
 	const wrapper = container.createDiv({ cls: "fantasy-map-copy-link" });
 	const link = wrapper.createEl("a", {
-		text: "Copy Fantasy-Map code block",
+		text: "Copy Fantasy-Map template",
 		href: "#",
+	});
+
+	link.addEventListener("click", (event) => {
+		void handleCopyClick(event);
 	});
 
 	async function handleCopyClick(event: MouseEvent) {
@@ -349,17 +353,15 @@ export function appendCopyLink(container: HTMLElement) {
 		try {
 			await navigator.clipboard.writeText(fantasyMapCodeBlockCopyToClipboardString);
 			link.setText("Copied");
-			new Notice("Fantasy-Map code block copied");
-			window.setTimeout(() => link.setText("Copy Fantasy-Map code block"), 1500);
+			new Notice("Fantasy-Map template copied");
+			window.setTimeout(() => {
+				link.setText("Copy Fantasy-Map template");
+			}, 1500);
 		} catch (err) {
 			console.warn("Fantasy-Map copy failed", err);
-			new Notice("Failed to copy Fantasy-Map code block");
+			new Notice("Failed to copy Fantasy-Map template");
 		}
 	}
-
-	link.addEventListener("click", (event) => {
-		void handleCopyClick(event);
-	});
 }
 
 export function compileHelpMessages(messages: string[], title: string): string | null {
