@@ -1,5 +1,3 @@
-import { App } from "obsidian";
-import { updatePinPositions } from "./pinInteractions";
 import { FantasyMapParams } from "./paramaters";
 import { FantasyMapSettings } from "./settings";
 
@@ -11,57 +9,226 @@ export interface PanZoomState {
 	maxZoom: number;
 }
 
-let isPanning = false;
-let panningEnabled = true;
-let lastX = 0;
-let lastY = 0;
+export interface MapInteractionController {
+	init(): void;
+	setPanningEnabled(enabled: boolean): void;
+	destroy(): void;
+}
 
-export function initMapInteractions(
-	app: App,
-	wrapper: HTMLElement,
-	bgLayer: HTMLElement,
-	tilesLayer: HTMLElement,
-	toolbar: HTMLElement,
-	paramaters: FantasyMapParams,
-	settings: FantasyMapSettings
-) {
-	const state: PanZoomState = {
-		zoom: paramaters.defaultZoomLevel || 1,
-		offsetX: 0,
-		offsetY: 0,
-		minZoom: 1,
-		maxZoom: 15,
+interface MapInteractionOptions {
+	wrapper: HTMLElement;
+	bgLayer: HTMLElement;
+	tilesLayer: HTMLElement;
+	toolbar: HTMLElement;
+	parameters: FantasyMapParams;
+	settings: FantasyMapSettings;
+	onViewportChanged: (
+		offsetX: number,
+		offsetY: number,
+		tileWidth: number,
+		tileHeight: number
+	) => void;
+	onInteractionStart?: () => void;
+}
+
+export function createMapInteractionController(
+	options: MapInteractionOptions
+): MapInteractionController {
+	return new MapInteractionManager(options);
+}
+
+class MapInteractionManager implements MapInteractionController {
+	private readonly wrapper: HTMLElement;
+	private readonly bgLayer: HTMLElement;
+	private readonly tilesLayer: HTMLElement;
+	private readonly toolbar: HTMLElement;
+	private readonly parameters: FantasyMapParams;
+	private readonly settings: FantasyMapSettings;
+	private readonly onViewportChanged: MapInteractionOptions["onViewportChanged"];
+	private readonly onInteractionStart?: () => void;
+
+	private readonly state: PanZoomState;
+	private isPanning = false;
+	private panningEnabled = true;
+	private lastX = 0;
+	private lastY = 0;
+
+	private readonly onPointerDown = (e: PointerEvent) => {
+		if (!this.panningEnabled) return;
+		if (this.toolbar.contains(e.target as Node)) return;
+
+		this.onInteractionStart?.();
+
+		this.isPanning = true;
+		this.lastX = e.clientX;
+		this.lastY = e.clientY;
+
+		this.wrapper.setPointerCapture(e.pointerId);
 	};
 
-	function applyTransform() {
-		const tileWidth = wrapper.clientWidth * state.zoom;
-		const tileHeight = wrapper.clientHeight * state.zoom;
+	private readonly onPointerMove = (e: PointerEvent) => {
+		if (!this.isPanning || !this.panningEnabled) return;
 
-		const wrappedX = (state.offsetX % tileWidth) - tileWidth;
-		const wrappedY = (state.offsetY % tileHeight) - tileHeight;
+		const dx = e.clientX - this.lastX;
+		const dy = e.clientY - this.lastY;
 
-		tilesLayer.setCssStyles({
-			transform: `translate(${wrappedX}px, ${wrappedY}px) scale(${state.zoom})`,
+		this.lastX = e.clientX;
+		this.lastY = e.clientY;
+
+		this.state.offsetX += dx;
+		this.state.offsetY += dy;
+
+		this.clampOffsets();
+		this.applyTransform();
+	};
+
+	private readonly onPointerUp = () => {
+		this.isPanning = false;
+	};
+
+	private readonly onWheel = (e: WheelEvent) => {
+		e.preventDefault();
+
+		const zoomStep = this.toolbar.querySelector(".fm-zoom-step") as
+			| HTMLInputElement
+			| null;
+		const zoomValue = Number(zoomStep?.value);
+		const base =
+			1 +
+			(isNaN(zoomValue) ? this.settings.defaultZoomIncrement : zoomValue) * 0.1;
+
+		const factor = e.deltaY < 0 ? base : 1 / base;
+		this.zoomAt(e.clientX, e.clientY, factor);
+	};
+
+	private readonly onZoomInClick = () => {
+		const stepInput = this.toolbar.querySelector(".fm-zoom-step") as
+			| HTMLInputElement
+			| null;
+		const stepValue = Number(stepInput?.value);
+		const step =
+			Math.abs(stepValue) ||
+			this.parameters.defaultZoomIncrement ||
+			this.settings.defaultZoomIncrement;
+		const factorBase = 1 + step * 0.1;
+		this.zoomAtViewportCenter(factorBase);
+	};
+
+	private readonly onZoomOutClick = () => {
+		const stepInput = this.toolbar.querySelector(".fm-zoom-step") as
+			| HTMLInputElement
+			| null;
+		const stepValue = Number(stepInput?.value);
+		const step =
+			Math.abs(stepValue) ||
+			this.parameters.defaultZoomIncrement ||
+			this.settings.defaultZoomIncrement;
+		const factorBase = 1 + step * 0.1;
+		this.zoomAtViewportCenter(1 / factorBase);
+	};
+
+	private readonly onResetClick = () => {
+		this.reset();
+	};
+
+	constructor(options: MapInteractionOptions) {
+		this.wrapper = options.wrapper;
+		this.bgLayer = options.bgLayer;
+		this.tilesLayer = options.tilesLayer;
+		this.toolbar = options.toolbar;
+		this.parameters = options.parameters;
+		this.settings = options.settings;
+		this.onViewportChanged = options.onViewportChanged;
+		this.onInteractionStart = options.onInteractionStart;
+
+		this.state = {
+			zoom: this.parameters.defaultZoomLevel || 1,
+			offsetX: 0,
+			offsetY: 0,
+			minZoom: 1,
+			maxZoom: 15,
+		};
+	}
+
+	init(): void {
+		this.wrapper.addEventListener("pointerdown", this.onPointerDown);
+		this.wrapper.addEventListener("pointermove", this.onPointerMove);
+		this.wrapper.addEventListener("pointerup", this.onPointerUp);
+		this.wrapper.addEventListener("wheel", this.onWheel, { passive: false });
+
+		this.zoomInBtn?.addEventListener("click", this.onZoomInClick);
+		this.zoomOutBtn?.addEventListener("click", this.onZoomOutClick);
+		this.resetBtn?.addEventListener("click", this.onResetClick);
+
+		this.reset();
+	}
+
+	setPanningEnabled(enabled: boolean): void {
+		this.panningEnabled = enabled;
+		if (!enabled) {
+			this.isPanning = false;
+		}
+	}
+
+	destroy(): void {
+		this.isPanning = false;
+
+		this.wrapper.removeEventListener("pointerdown", this.onPointerDown);
+		this.wrapper.removeEventListener("pointermove", this.onPointerMove);
+		this.wrapper.removeEventListener("pointerup", this.onPointerUp);
+		this.wrapper.removeEventListener("wheel", this.onWheel);
+
+		this.zoomInBtn?.removeEventListener("click", this.onZoomInClick);
+		this.zoomOutBtn?.removeEventListener("click", this.onZoomOutClick);
+		this.resetBtn?.removeEventListener("click", this.onResetClick);
+	}
+
+	private get zoomInBtn(): HTMLButtonElement | null {
+		return this.toolbar.querySelector(".fm-zoom-in");
+	}
+
+	private get zoomOutBtn(): HTMLButtonElement | null {
+		return this.toolbar.querySelector(".fm-zoom-out");
+	}
+
+	private get resetBtn(): HTMLButtonElement | null {
+		return this.toolbar.querySelector(".fm-reset");
+	}
+
+	private applyTransform(): void {
+		const tileWidth = this.wrapper.clientWidth * this.state.zoom;
+		const tileHeight = this.wrapper.clientHeight * this.state.zoom;
+
+		const wrappedX = (this.state.offsetX % tileWidth) - tileWidth;
+		const wrappedY = (this.state.offsetY % tileHeight) - tileHeight;
+
+		this.tilesLayer.setCssStyles({
+			transform: `translate(${wrappedX}px, ${wrappedY}px) scale(${this.state.zoom})`,
 			transformOrigin: "top left",
 		});
 
-		bgLayer.setCssStyles({
-			backgroundSize: `${100 * state.zoom}% auto`,
+		this.bgLayer.setCssStyles({
+			backgroundSize: `${100 * this.state.zoom}% auto`,
 			backgroundPosition: `${wrappedX}px ${wrappedY}px`,
 		});
 
-		updatePinPositions(state.offsetX, state.offsetY, tileWidth, tileHeight, paramaters);
+		this.onViewportChanged(
+			this.state.offsetX,
+			this.state.offsetY,
+			tileWidth,
+			tileHeight
+		);
 	}
 
-	function clampOffsets() {
-		const rect = wrapper.getBoundingClientRect();
+	private clampOffsets(): void {
+		const rect = this.wrapper.getBoundingClientRect();
 		const viewW = rect.width;
 		const viewH = rect.height;
 
-		const worldW = viewW * state.zoom;
-		const worldH = viewH * state.zoom;
+		const worldW = viewW * this.state.zoom;
+		const worldH = viewH * this.state.zoom;
 
-		const repeat = paramaters.repeat ?? "no-repeat";
+		const repeat = this.parameters.repeat ?? "no-repeat";
 
 		let minX = -(worldW - viewW);
 		let maxX = 0;
@@ -91,120 +258,47 @@ export function initMapInteractions(
 		}
 
 		if (Number.isFinite(minX)) {
-			state.offsetX = Math.max(minX, Math.min(maxX, state.offsetX));
+			this.state.offsetX = Math.max(minX, Math.min(maxX, this.state.offsetX));
 		}
+
 		if (Number.isFinite(minY)) {
-			state.offsetY = Math.max(minY, Math.min(maxY, state.offsetY));
+			this.state.offsetY = Math.max(minY, Math.min(maxY, this.state.offsetY));
 		}
 	}
 
-	function reset() {
-		state.zoom = paramaters.defaultZoomLevel || 1;
-		state.offsetX = 0;
-		state.offsetY = 0;
-		applyTransform();
+	private reset(): void {
+		this.state.zoom = this.parameters.defaultZoomLevel || 1;
+		this.state.offsetX = 0;
+		this.state.offsetY = 0;
+		this.applyTransform();
 	}
 
-	function zoomAt(clientX: number, clientY: number, factor: number) {
-		const rect = wrapper.getBoundingClientRect();
+	private zoomAt(clientX: number, clientY: number, factor: number): void {
+		const rect = this.wrapper.getBoundingClientRect();
 
 		const px = clientX - rect.left;
 		const py = clientY - rect.top;
 
-		const worldX = (px - state.offsetX) / state.zoom;
-		const worldY = (py - state.offsetY) / state.zoom;
+		const worldX = (px - this.state.offsetX) / this.state.zoom;
+		const worldY = (py - this.state.offsetY) / this.state.zoom;
 
 		const newZoom = Math.min(
-			state.maxZoom,
-			Math.max(state.minZoom, state.zoom * factor)
+			this.state.maxZoom,
+			Math.max(this.state.minZoom, this.state.zoom * factor)
 		);
 
-		state.offsetX = px - worldX * newZoom;
-		state.offsetY = py - worldY * newZoom;
-		state.zoom = newZoom;
+		this.state.offsetX = px - worldX * newZoom;
+		this.state.offsetY = py - worldY * newZoom;
+		this.state.zoom = newZoom;
 
-		clampOffsets();
-		applyTransform();
+		this.clampOffsets();
+		this.applyTransform();
 	}
 
-	wrapper.addEventListener("pointerdown", (e) => {
-		if (toolbar.contains(e.target as Node)) return;
-
-		isPanning = true;
-
-		lastX = e.clientX;
-		lastY = e.clientY;
-
-		wrapper.setPointerCapture(e.pointerId);
-	});
-
-	wrapper.addEventListener("pointermove", (e) => {
-		if (!isPanning || !panningEnabled) return;
-
-		const dx = e.clientX - lastX;
-		const dy = e.clientY - lastY;
-
-		lastX = e.clientX;
-		lastY = e.clientY;
-
-		state.offsetX += dx;
-		state.offsetY += dy;
-
-		clampOffsets();
-		applyTransform();
-	});
-
-	wrapper.addEventListener("pointerup", () => {
-		isPanning = false;
-	});
-
-	wrapper.addEventListener(
-		"wheel",
-		(e) => {
-			e.preventDefault();
-
-			const zoomStep = toolbar.querySelector<HTMLInputElement>(".fm-zoom-step");
-			const zoomValue = Number(zoomStep?.value);
-			const base = 1 + (isNaN(zoomValue) ? settings.defaultZoomIncrement : zoomValue) * 0.1;
-
-			const factor = e.deltaY < 0 ? base : 1 / base;
-			zoomAt(e.clientX, e.clientY, factor);
-		},
-		{ passive: false }
-	);
-
-	const zoomInBtn = toolbar.querySelector(".fm-zoom-in");
-	const zoomOutBtn = toolbar.querySelector(".fm-zoom-out");
-	const resetBtn = toolbar.querySelector(".fm-reset");
-
-	function zoomAtViewportCenter(zoomFactor: number) {
-		const rect = wrapper.getBoundingClientRect();
+	private zoomAtViewportCenter(zoomFactor: number): void {
+		const rect = this.wrapper.getBoundingClientRect();
 		const cx = rect.left + rect.width / 2;
-		const cy = rect.top + (rect.height - toolbar.clientHeight) / 2;
-		zoomAt(cx, cy, zoomFactor);
+		const cy = rect.top + (rect.height - this.toolbar.clientHeight) / 2;
+		this.zoomAt(cx, cy, zoomFactor);
 	}
-
-	zoomInBtn?.addEventListener("click", () => {
-		const stepInput = toolbar.querySelector<HTMLInputElement>(".fm-zoom-step");
-		const stepValue = Number(stepInput?.value);
-		const step = Math.abs(stepValue) || paramaters.defaultZoomIncrement || settings.defaultZoomIncrement;
-		const factorBase = 1 + step * 0.1;
-		zoomAtViewportCenter(factorBase);
-	});
-     
-	zoomOutBtn?.addEventListener("click", () => {
-		const stepInput = toolbar.querySelector<HTMLInputElement>(".fm-zoom-step");
-		const stepValue = Number(stepInput?.value);
-		const step = Math.abs(stepValue) || paramaters.defaultZoomIncrement || settings.defaultZoomIncrement;
-		const factorBase = 1 + step * 0.1;
-		zoomAtViewportCenter(1 / factorBase);
-	});
-
-	resetBtn?.addEventListener("click", () => reset());
-
-	reset();
-}
-
-export function enableMapPanning(enabled: boolean) {
-	panningEnabled = enabled;
 }

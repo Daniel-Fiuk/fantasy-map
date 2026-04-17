@@ -7,8 +7,8 @@ import {
 } from "./paramaters";
 
 export interface FantasyMapSettings {
-	defaultPinSize: string; // e.g. "24px", "1.5rem", "5%"
-	defaultZoomIncrement: number; // e.g. 1 will increment zoom steps by 1, 2 by 2, and so on
+	defaultPinSize: string;
+	defaultZoomIncrement: number;
 }
 
 export const DEFAULT_SETTINGS: FantasyMapSettings = {
@@ -28,11 +28,10 @@ export class FantasyMapSettingTab extends PluginSettingTab {
 		const { containerEl } = this;
 		containerEl.empty();
 
-		// Default Pin Size
 		new Setting(containerEl)
 			.setName("Default Pin Size")
 			.setDesc(
-				"Set the default size for pins on the map (e.g. 24px, 1.5rem, 5%).",
+				"Set the default size for pins on the map (e.g. 24px, 1.5rem, 5%)."
 			)
 			.addText((text) => {
 				text
@@ -45,7 +44,7 @@ export class FantasyMapSettingTab extends PluginSettingTab {
 							text.inputEl.addClass("is-invalid");
 							text.inputEl.setAttribute(
 								"title",
-								"Enter a valid CSS size like 24px, 1.5rem, 5%, 10vw, or 0.",
+								"Enter a valid CSS size like 24px, 1.5rem, 5%, 10vw, or 0."
 							);
 							return;
 						}
@@ -58,60 +57,57 @@ export class FantasyMapSettingTab extends PluginSettingTab {
 					});
 			});
 
-		// Default Zoom Increment
 		new Setting(containerEl)
 			.setName("Default Zoom Increment")
 			.setDesc(
-				"Set the default zoom increment for the map (e.g. 1 means each zoom step will increase/decrease the zoom level by 1).",
+				"Set the default zoom increment for the map (e.g. 1 means each zoom step will increase/decrease the zoom level by 1)."
 			)
-			.addText((text) =>
+			.addText((text) => {
 				text
 					.setPlaceholder("Enter a number (e.g. 1)")
 					.setValue(this.plugin.settings.defaultZoomIncrement.toString())
 					.onChange(async (value) => {
 						const num = Number(value);
+
 						if (!isNaN(num) && num > 0) {
 							this.plugin.settings.defaultZoomIncrement = num;
 							await this.plugin.saveSettings();
 						} else {
 							new Notice(
-								"Please enter a valid positive number for the zoom increment.",
+								"Please enter a valid positive number for the zoom increment."
 							);
 						}
-					}),
-			);
+					});
+			});
 
-		// Template code block
 		new Setting(containerEl)
 			.setName("Template code block")
-			.setDesc("Copy this into a note to start a Fantasy-Map block. Use 'help' or '-h' to get helpfull messages and usage instructions.")
+			.setDesc(
+				"Copy this into a note to start a Fantasy-Map block. Use 'help' or '-h' to get helpful messages and usage instructions."
+			)
 			.addTextArea((text) => {
 				text.setValue(fantasyMapCodeBlockCopyToClipboardString);
 				text.setDisabled(true);
-				text.inputEl.rows = 11;
+				text.inputEl.rows = 12;
 				text.inputEl.setCssStyles({
 					width: "100%",
 					fontFamily: "var(--font-monospace)",
 				});
 			})
 			.addButton((button) => {
-				button
-					.setButtonText("Copy")
-					.setCta()
-					.onClick(async () => {
-						try {
-							await navigator.clipboard.writeText(
-								fantasyMapCodeBlockCopyToClipboardString,
-							);
-							new Notice("Fantasy-Map block copied");
-						} catch (e) {
-							console.error(e);
-							new Notice("Failed to copy block");
-						}
-					});
+				button.setButtonText("Copy").setCta().onClick(async () => {
+					try {
+						await navigator.clipboard.writeText(
+							fantasyMapCodeBlockCopyToClipboardString
+						);
+						new Notice("Fantasy-Map block copied");
+					} catch (e) {
+						console.error(e);
+						new Notice("Failed to copy block");
+					}
+				});
 			});
 
-		// Template Note Front Matter
 		new Setting(containerEl)
 			.setName("Template Note Front Matter")
 			.setDesc("Copy this into a note to pin a note to your map.")
@@ -125,20 +121,17 @@ export class FantasyMapSettingTab extends PluginSettingTab {
 				});
 			})
 			.addButton((button) => {
-				button
-					.setButtonText("Copy")
-					.setCta()
-					.onClick(async () => {
-						try {
-							await navigator.clipboard.writeText(
-								fantasyMapFrontMatterCopyToClipboardString,
-							);
-							new Notice("Fantasy-Map block copied");
-						} catch (e) {
-							console.error(e);
-							new Notice("Failed to copy block");
-						}
-					});
+				button.setButtonText("Copy").setCta().onClick(async () => {
+					try {
+						await navigator.clipboard.writeText(
+							fantasyMapFrontMatterCopyToClipboardString
+						);
+						new Notice("Fantasy-Map front matter copied");
+					} catch (e) {
+						console.error(e);
+						new Notice("Failed to copy block");
+					}
+				});
 			});
 	}
 }

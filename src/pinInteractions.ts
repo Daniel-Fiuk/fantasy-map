@@ -6,7 +6,6 @@ import {
 	TFile,
 } from "obsidian";
 import { FantasyMapParams } from "./paramaters";
-import { enableMapPanning } from "./mapInteractions";
 import {
 	showCustomPreview,
 	hideCustomPreview,
@@ -36,151 +35,252 @@ export interface Pin {
 	location: Location;
 }
 
-const Pins: Pin[] = [];
-let selectedPin: Pin | null = null;
+export interface PinInteractionController {
+	init(): Promise<void>;
+	updatePinPositions(
+		offsetX: number,
+		offsetY: number,
+		tileWidth: number,
+		tileHeight: number
+	): void;
+	clearHoverDelay(): void;
+	destroy(): void;
+}
 
-let disablePreviews = false;
+interface PinInteractionOptions {
+	app: App;
+	component: Component;
+	wrapper: HTMLElement;
+	parameters: FantasyMapParams;
+	ctx: MarkdownPostProcessorContext;
+	setMapPanningEnabled: (enabled: boolean) => void;
+}
 
-let pinDragging = false;
-let pinDragStartPos: Position = { left: 0, top: 0 };
+export function createPinInteractionController(
+	options: PinInteractionOptions
+): PinInteractionController {
+	return new PinInteractionManager(options);
+}
 
-let latBounds: { min: number; max: number } = { min: 0, max: 0 };
-let lngBounds: { min: number; max: number } = { min: 0, max: 0 };
+class PinInteractionManager implements PinInteractionController {
+	private readonly app: App;
+	private readonly component: Component;
+	private readonly wrapper: HTMLElement;
+	private readonly parameters: FantasyMapParams;
+	private readonly ctx: MarkdownPostProcessorContext;
+	private readonly setMapPanningEnabled: (enabled: boolean) => void;
 
-let currentMap: { width: number; height: number; xOffset: number; yOffset: number } = {
-	width: 0,
-	height: 0,
-	xOffset: 0,
-	yOffset: 0,
-};
+	private pins: Pin[] = [];
+	private selectedPin: Pin | null = null;
+	private pinDragging = false;
+	private pointerStartPos: Position | null = null;
+	private hoverTimeout: number | null = null;
+	private suppressPreviewUntil = 0;
 
-let timeOut: number | null = null;
+	private latBounds = { min: 0, max: 0 };
+	private lngBounds = { min: 0, max: 0 };
 
-export async function initPinInteractions(
-	app: App,
-	component: Component,
-	wrapper: HTMLElement,
-	paramaters: FantasyMapParams,
-	element: HTMLElement,
-	ctx: MarkdownPostProcessorContext
-) {
-	disablePreviews = false;
-	Pins.length = 0;
-	
-	const notes = app.vault.getMarkdownFiles();
-
-	currentMap.width = wrapper.clientWidth;
-	currentMap.height = wrapper.clientHeight;
-
-	if (paramaters.latitudeRange == null || paramaters.longitudeRange == null) return;
-
-	latBounds = {
-		min: paramaters.latitudeRange[0],
-		max: paramaters.latitudeRange[1],
+	private currentMap = {
+		width: 0,
+		height: 0,
+		xOffset: 0,
+		yOffset: 0,
 	};
-	lngBounds = {
-		min: paramaters.longitudeRange[0],
-		max: paramaters.longitudeRange[1],
-	};
 
-	for (const note of notes) {
-		await createPin(note);
-	}
+	private readonly onWrapperPointerMove = (e: PointerEvent) => {
+		if (!this.selectedPin || !this.pointerStartPos) return;
 
-	wrapper.addEventListener("pointermove", (e) => {
-		if (!selectedPin) return;
+		const currentPos = this.mouseToPx(e, this.wrapper.getBoundingClientRect());
 
-		if (!pinDragging) {
-			const currentPos = mouseToPx(e, wrapper.getBoundingClientRect());
-			const dx = currentPos.left - pinDragStartPos.left;
-			const dy = currentPos.top - pinDragStartPos.top;
+		if (!this.pinDragging) {
+			const dx = currentPos.left - this.pointerStartPos.left;
+			const dy = currentPos.top - this.pointerStartPos.top;
 			const distanceSquared = dx * dx + dy * dy;
 
-			if (distanceSquared > 25) { // 5px threshold
-				pinDragging = true;
+			if (distanceSquared > 25) {
+				this.pinDragging = true;
+				this.suppressPreview(150);
 			}
 		}
-		
-		else {
-			const formattedPx = formatPx(mouseToPx(e, wrapper.getBoundingClientRect()));
-			selectedPin.element.setCssStyles({
-				left: formattedPx.left,
-				top: formattedPx.top,
-			});
-		}
-	});
 
-	wrapper.addEventListener("pointerup", async (e) => {
-		if (!selectedPin) return;
+		if (!this.pinDragging) return;
 
-		if (pinDragging) {
-			const px = mouseToPx(e, wrapper.getBoundingClientRect());
+		const formattedPx = this.formatPx(currentPos);
+		this.selectedPin.element.setCssStyles({
+			left: formattedPx.left,
+			top: formattedPx.top,
+		});
+	};
 
-			px.left = wrapValue(px.left - currentMap.xOffset, currentMap.width);
-			px.top = wrapValue(px.top - currentMap.yOffset, currentMap.height);
+	private readonly onWrapperPointerUp = async (e: PointerEvent) => {
+		if (!this.selectedPin) return;
 
-			selectedPin.location = pxToLocation(px, paramaters);
+		const selectedPin = this.selectedPin;
 
-			const pinToUpdate = selectedPin;
-			await app.fileManager.processFrontMatter(pinToUpdate.note, (frontmatter) => {
-				frontmatter["fm-location"] = formatLocation(pinToUpdate.location);
-			});
-		}
-		else {
-			disablePreviews = true;
-			destroyCustomPreview();
-			app.workspace.openLinkText(selectedPin.note.path, "", false);
-		}
+		if (this.pinDragging) {
+			const px = this.mouseToPx(e, this.wrapper.getBoundingClientRect());
 
-		enableMapPanning(true);
-		selectedPin = null;
-		pinDragging = false;
-	});
-
-	wrapper.addEventListener("pointerleave", () => {
-		
-		if (pinDragging) {
-			pinDragging = false;
-			selectedPin = null;
-			
-			console.log("Pointer left map while dragging pin, cancelling drag and resetting pin position.");
-			
-			updatePinPositions(
-				currentMap.xOffset,
-				currentMap.yOffset,
-				currentMap.width,
-				currentMap.height,
-				paramaters
+			px.left = this.wrapValue(
+				px.left - this.currentMap.xOffset,
+				this.currentMap.width
 			);
-		}
-	});
+			px.top = this.wrapValue(
+				px.top - this.currentMap.yOffset,
+				this.currentMap.height
+			);
 
-	async function createPin(note: TFile) {
-		const cache = app.metadataCache.getFileCache(note);
+			selectedPin.location = this.pxToLocation(px);
+
+			await this.app.fileManager.processFrontMatter(
+				selectedPin.note,
+				(frontmatter) => {
+					frontmatter["fm-location"] = this.formatLocation(selectedPin.location);
+				}
+			);
+		} else {
+			this.suppressPreview(200);
+			destroyCustomPreview();
+			this.app.workspace.openLinkText(selectedPin.note.path, "", false);
+		}
+
+		this.setMapPanningEnabled(true);
+		this.selectedPin = null;
+		this.pinDragging = false;
+		this.pointerStartPos = null;
+	};
+
+	private readonly onWrapperPointerLeave = () => {
+		if (!this.pinDragging) return;
+
+		this.pinDragging = false;
+		this.selectedPin = null;
+		this.pointerStartPos = null;
+		this.setMapPanningEnabled(true);
+
+		this.updatePinPositions(
+			this.currentMap.xOffset,
+			this.currentMap.yOffset,
+			this.currentMap.width,
+			this.currentMap.height
+		);
+	};
+
+	constructor(options: PinInteractionOptions) {
+		this.app = options.app;
+		this.component = options.component;
+		this.wrapper = options.wrapper;
+		this.parameters = options.parameters;
+		this.ctx = options.ctx;
+		this.setMapPanningEnabled = options.setMapPanningEnabled;
+	}
+
+	async init(): Promise<void> {
+		if (
+			this.parameters.latitudeRange == null ||
+			this.parameters.longitudeRange == null
+		) {
+			return;
+		}
+
+		this.currentMap.width = this.wrapper.clientWidth;
+		this.currentMap.height = this.wrapper.clientHeight;
+
+		this.latBounds = {
+			min: this.parameters.latitudeRange[0],
+			max: this.parameters.latitudeRange[1],
+		};
+
+		this.lngBounds = {
+			min: this.parameters.longitudeRange[0],
+			max: this.parameters.longitudeRange[1],
+		};
+
+		const notes = this.app.vault.getMarkdownFiles();
+		for (const note of notes) {
+			await this.createPin(note);
+		}
+
+		this.wrapper.addEventListener("pointermove", this.onWrapperPointerMove);
+		this.wrapper.addEventListener("pointerup", this.onWrapperPointerUp);
+		this.wrapper.addEventListener("pointerleave", this.onWrapperPointerLeave);
+	}
+
+	updatePinPositions(
+		offsetX: number,
+		offsetY: number,
+		tileWidth: number,
+		tileHeight: number
+	): void {
+		this.currentMap.width = tileWidth;
+		this.currentMap.height = tileHeight;
+		this.currentMap.xOffset = offsetX;
+		this.currentMap.yOffset = offsetY;
+
+		for (const pin of this.pins) {
+			if (pin === this.selectedPin) continue;
+
+			const px = this.locationToPx(pin.location);
+
+			pin.element.setCssStyles({
+				left: `${this.wrapValue(px.left + offsetX, tileWidth)}px`,
+				top: `${this.wrapValue(px.top + offsetY, tileHeight)}px`,
+			});
+		}
+	}
+
+	clearHoverDelay(): void {
+		if (this.hoverTimeout !== null) {
+			window.clearTimeout(this.hoverTimeout);
+			this.hoverTimeout = null;
+		}
+	}
+
+	destroy(): void {
+		this.clearHoverDelay();
+		this.wrapper.removeEventListener("pointermove", this.onWrapperPointerMove);
+		this.wrapper.removeEventListener("pointerup", this.onWrapperPointerUp);
+		this.wrapper.removeEventListener("pointerleave", this.onWrapperPointerLeave);
+
+		for (const pin of this.pins) {
+			pin.element.remove();
+		}
+
+		this.pins = [];
+		this.selectedPin = null;
+		this.pointerStartPos = null;
+		this.pinDragging = false;
+		destroyCustomPreview();
+	}
+
+	private async createPin(note: TFile): Promise<void> {
+		const cache = this.app.metadataCache.getFileCache(note);
 		const frontMatter = cache?.frontmatter;
 		if (!frontMatter) return;
 
 		const frontMatterLocation: unknown = frontMatter["fm-location"];
 		if (frontMatterLocation === undefined) return;
 
-		const mapIDs = paramaters.mapIDs ?? [];
+		const mapIDs = this.parameters.mapIDs ?? [];
 		if (mapIDs.length > 0 && mapIDs[0] !== "") {
 			const mapId: unknown = frontMatter["fm-id"];
-			if (!mapIDs.includes(String(mapId))) return;
+			if (mapId == null || !mapIDs.includes(String(mapId))) return;
 		}
 
-		const location = parseFormattedLocation(String(frontMatterLocation));
+		const location = this.parseFormattedLocation(String(frontMatterLocation));
 		if (!location) return;
+
 		if (
-			location.lat < latBounds.min ||
-			location.lat > latBounds.max ||
-			location.lng < lngBounds.min ||
-			location.lng > lngBounds.max
-		) return;
+			location.lat < this.latBounds.min ||
+			location.lat > this.latBounds.max ||
+			location.lng < this.lngBounds.min ||
+			location.lng > this.lngBounds.max
+		) {
+			return;
+		}
 
-		const pinElement = wrapper.createEl("div", { cls: "map-pin" });
+		const pinElement = this.wrapper.createEl("div", { cls: "map-pin" });
 
-		const formattedPx = formatPx(locationToPx(location, paramaters));
+		const formattedPx = this.formatPx(this.locationToPx(location));
 		pinElement.setCssStyles({
 			left: formattedPx.left,
 			top: formattedPx.top,
@@ -189,16 +289,20 @@ export async function initPinInteractions(
 		const pinIconEl = pinElement.createEl("div", { cls: "map-pin-icon" });
 
 		const pinIconValue: unknown = frontMatter["fm-pin-icon"];
-		const pinFile = resolvePinIconFile(app, pinIconValue, ctx.sourcePath);
-		
+		const pinFile = this.resolvePinIconFile(
+			this.app,
+			pinIconValue,
+			this.ctx.sourcePath
+		);
+
 		if (pinFile) {
 			if (pinFile.extension.toLowerCase() === "svg") {
-				pinIconEl.innerHTML = addSvgViewBoxPadding(
-					await app.vault.cachedRead(pinFile),
+				pinIconEl.innerHTML = this.addSvgViewBoxPadding(
+					await this.app.vault.cachedRead(pinFile),
 					2
 				);
 			} else {
-				const url = app.vault.getResourcePath(pinFile);
+				const url = this.app.vault.getResourcePath(pinFile);
 				pinIconEl.createEl("img", {
 					attr: {
 						src: url,
@@ -207,20 +311,20 @@ export async function initPinInteractions(
 				});
 			}
 		} else {
-			pinIconEl.innerHTML = addSvgViewBoxPadding(defaultPinIcon, 2);
+			pinIconEl.innerHTML = this.addSvgViewBoxPadding(defaultPinIcon, 2);
 		}
 
-		const match = paramaters.pinSize.trim().match(
+		const match = this.parameters.pinSize.trim().match(
 			/^([+-]?(?:\d+(?:\.\d+)?|\.\d+))%$/
 		);
 
 		if (match) {
 			pinIconEl.setCssStyles({
-				width: `${Number(match[1]) * 0.01 * currentMap.width}px`,
+				width: `${Number(match[1]) * 0.01 * this.currentMap.width}px`,
 			});
 		} else {
 			pinIconEl.setCssStyles({
-				width: paramaters.pinSize,
+				width: this.parameters.pinSize,
 			});
 		}
 
@@ -230,192 +334,189 @@ export async function initPinInteractions(
 			location,
 		};
 
-		initPinActions(newPin, app, component, paramaters);
-		Pins.push(newPin);
+		this.initPinActions(newPin);
+		this.pins.push(newPin);
 	}
-}
 
-function resolvePinIconFile(
-	app: App,
-	value: unknown,
-	sourcePath: string
-): TFile | null {
-	if (typeof value !== "string") return null;
+	private initPinActions(pin: Pin): void {
+		pin.element.addEventListener("pointerenter", (e) => {
+			if (this.selectedPin || this.shouldSuppressPreview()) return;
 
-	const raw = value.trim();
-	if (!raw) return null;
-
-	const normalized = raw.replace(/^\[\[|\]\]$/g, "").trim();
-	if (!normalized) return null;
-
-	const linked = app.metadataCache.getFirstLinkpathDest(normalized, sourcePath);
-	if (linked instanceof TFile) return linked ?? null;
-
-	const byPath = app.vault.getAbstractFileByPath(normalizePath(normalized));
-	if (byPath instanceof TFile) return byPath ?? null;
-
-	const files = app.vault.getFiles();
-	const lower = normalized.toLowerCase();
-
-	const supportedExts = new Set(["svg", "png", "jpg", "jpeg", "webp", "gif"]);
-
-	const exactName = files.find((f) => f.name.toLowerCase() === lower);
-	if (exactName && supportedExts.has(exactName.extension.toLowerCase())) return exactName ?? null;
-
-	const basenameMatches = files.filter(
-		(f) =>
-			f.basename.toLowerCase() === lower &&
-			supportedExts.has(f.extension.toLowerCase())
-	);
-
-	if (basenameMatches.length === 1) return basenameMatches[0] ?? null;
-
-	const svgMatch = basenameMatches.find(
-		(f) => f.extension.toLowerCase() === "svg"
-	);
-	if (svgMatch) return svgMatch ?? null;
-
-	return basenameMatches[0] ?? null;
-}
-
-function addSvgViewBoxPadding(svg: string, pad: number): string {
-	return svg.replace(/viewBox="([^"]+)"/, (_, vb) => {
-		const [x, y, w, h] = vb.trim().split(/\s+/).map(Number);
-		if ([x, y, w, h].some(Number.isNaN)) return `viewBox="${vb}"`;
-		return `viewBox="${x - pad} ${y - pad} ${w + pad * 2} ${h + pad * 2}"`;
-	});
-}
-
-function formatLocation(location: Location): string {
-	return `(${location.lat.toFixed(4)}, ${location.lng.toFixed(4)})`;
-}
-
-function parseFormattedLocation(formattedLocation: string): Location | null {
-	const match = formattedLocation.match(
-		/\(\s*([+-]?\d+(?:\.\d+)?)\s*,\s*([+-]?\d+(?:\.\d+)?)\s*\)/
-	);
-	if (!match) return null;
-
-	const location = {
-		lat: Number(match[1]),
-		lng: Number(match[2]),
-	};
-
-	if (Number.isNaN(location.lat) || Number.isNaN(location.lng)) return null;
-	return location;
-}
-
-function formatPx(px: Position): FormattedPosition {
-	return {
-		left: `${px.left}px`,
-		top: `${px.top}px`,
-	};
-}
-
-/*function parseFormattedPx(formattedPx: FormattedPosition): Position | null {
-	const leftMatch = formattedPx.left.match(/(-?\d+(?:\.\d+)?)\s*px/);
-	const topMatch = formattedPx.top.match(/(-?\d+(?:\.\d+)?)\s*px/);
-	if (!leftMatch || !topMatch) return null;
-
-	return {
-		left: Number(leftMatch[1]),
-		top: Number(topMatch[1]),
-	};
-}*/
-
-function locationToPx(locVal: Location, paramaters: FantasyMapParams): Position {
-	const latBoundsRange = latBounds.max - latBounds.min;
-	const lngBoundsRange = lngBounds.max - lngBounds.min;
-	return {
-		left:
-			(wrapValue(locVal.lng - lngBounds.min + paramaters.primeMeridianOffset[1], lngBoundsRange) / lngBoundsRange) *
-			currentMap.width,
-		top:
-			(wrapValue(-locVal.lat - latBounds.min + paramaters.primeMeridianOffset[0], latBoundsRange) / latBoundsRange) *
-			currentMap.height,
-	};
-}
-
-function pxToLocation(px: Position, paramaters: FantasyMapParams): Location {
-	const latBoundsRange = latBounds.max - latBounds.min;
-	const lngBoundsRange = lngBounds.max - lngBounds.min;
-	return {
-		lat: -(wrapValue(px.top / currentMap.height * latBoundsRange - paramaters.primeMeridianOffset[0], latBoundsRange) + latBounds.min),
-		lng: wrapValue(px.left / currentMap.width * lngBoundsRange - paramaters.primeMeridianOffset[1], lngBoundsRange) + lngBounds.min,
-	};
-}
-
-function mouseToPx(event: MouseEvent, rect: DOMRect): Position {
-	return {
-		left: event.clientX - rect.left,
-		top: event.clientY - rect.top,
-	};
-}
-
-function wrapValue(n: number, m: number) {
-	return ((n % m) + m) % m;
-}
-
-export function updatePinPositions(
-	offsetX: number,
-	offsetY: number,
-	tileWidth: number,
-	tileHeight: number,
-	paramaters: FantasyMapParams
-) {
-	currentMap.width = tileWidth;
-	currentMap.height = tileHeight;
-	currentMap.xOffset = offsetX;
-	currentMap.yOffset = offsetY;
-
-	for (const pin of Pins) {
-		if (pin === selectedPin) continue;
-
-		const px = locationToPx(pin.location, paramaters);
-
-		pin.element.setCssStyles({
-			left: `${wrapValue(px.left + offsetX, tileWidth)}px`,
-			top: `${wrapValue(px.top + offsetY, tileHeight)}px`,
+			this.startHoverDelay(100, () => {
+				void showCustomPreview(pin, this.app, this.component, e);
+			});
 		});
-	}
-}
 
-export function startTimeOut(time: number, callback: () => void) {
-	clearTimeOut();
-	timeOut = window.setTimeout(() => {
-		callback();
-	}, time);
-}
-
-export function clearTimeOut() {
-	if (timeOut !== null) {
-		window.clearTimeout(timeOut);
-		timeOut = null;
-	}
-}
-
-function initPinActions(pin: Pin, app: App, component: Component, paramaters: FantasyMapParams) {
-	pin.element.addEventListener("pointerenter", (e) => {
-		if (selectedPin || disablePreviews) return;
-		startTimeOut(100, () => {
-			showCustomPreview(pin, app, component, e);
+		pin.element.addEventListener("pointerleave", () => {
+			this.startHoverDelay(750, () => {
+				hideCustomPreview();
+			});
 		});
-	});
 
-	pin.element.addEventListener("pointerleave", () => {
-		startTimeOut(750, () => {
+		pin.element.addEventListener("pointerdown", (e) => {
+			if (this.selectedPin) return;
+
+			e.stopPropagation();
+			this.clearHoverDelay();
 			hideCustomPreview();
+
+			this.selectedPin = pin;
+			this.pinDragging = false;
+			this.pointerStartPos = this.mouseToPx(
+				e,
+				this.wrapper.getBoundingClientRect()
+			);
+
+			this.setMapPanningEnabled(false);
 		});
-	});
+	}
 
-	pin.element.addEventListener("pointerdown", () => {
-		if (selectedPin) return;
+	private startHoverDelay(time: number, callback: () => void): void {
+		this.clearHoverDelay();
+		this.hoverTimeout = window.setTimeout(() => {
+			callback();
+		}, time);
+	}
 
-		selectedPin = pin;
-		pinDragStartPos = locationToPx(pin.location, paramaters);
-		pinDragging = false;
-		
-		hideCustomPreview();
-		enableMapPanning(false);
-	});
+	private suppressPreview(ms: number): void {
+		this.suppressPreviewUntil = Date.now() + ms;
+	}
+
+	private shouldSuppressPreview(): boolean {
+		return Date.now() < this.suppressPreviewUntil;
+	}
+
+	private resolvePinIconFile(
+		app: App,
+		value: unknown,
+		sourcePath: string
+	): TFile | null {
+		if (typeof value !== "string") return null;
+
+		const raw = value.trim();
+		if (!raw) return null;
+
+		const normalized = raw.replace(/^\[\[|\]\]$/g, "").trim();
+		if (!normalized) return null;
+
+		const linked = app.metadataCache.getFirstLinkpathDest(normalized, sourcePath);
+		if (linked instanceof TFile) return linked ?? null;
+
+		const byPath = app.vault.getAbstractFileByPath(normalizePath(normalized));
+		if (byPath instanceof TFile) return byPath ?? null;
+
+		const files = app.vault.getFiles();
+		const lower = normalized.toLowerCase();
+
+		const supportedExts = new Set(["svg", "png", "jpg", "jpeg", "webp", "gif"]);
+
+		const exactName = files.find((f) => f.name.toLowerCase() === lower);
+		if (exactName && supportedExts.has(exactName.extension.toLowerCase())) {
+			return exactName ?? null;
+		}
+
+		const basenameMatches = files.filter(
+			(f) =>
+				f.basename.toLowerCase() === lower &&
+				supportedExts.has(f.extension.toLowerCase())
+		);
+
+		if (basenameMatches.length === 1) return basenameMatches[0] ?? null;
+
+		const svgMatch = basenameMatches.find(
+			(f) => f.extension.toLowerCase() === "svg"
+		);
+		if (svgMatch) return svgMatch ?? null;
+
+		return basenameMatches[0] ?? null;
+	}
+
+	private addSvgViewBoxPadding(svg: string, pad: number): string {
+		return svg.replace(/viewBox="([^"]+)"/, (_, vb) => {
+			const [x, y, w, h] = vb.trim().split(/\s+/).map(Number);
+			if ([x, y, w, h].some(Number.isNaN)) return `viewBox="${vb}"`;
+			return `viewBox="${x - pad} ${y - pad} ${w + pad * 2} ${h + pad * 2}"`;
+		});
+	}
+
+	private formatLocation(location: Location): string {
+		return `(${location.lat.toFixed(4)}, ${location.lng.toFixed(4)})`;
+	}
+
+	private parseFormattedLocation(formattedLocation: string): Location | null {
+		const match = formattedLocation.match(
+			/\(\s*([+-]?\d+(?:\.\d+)?)\s*,\s*([+-]?\d+(?:\.\d+)?)\s*\)/
+		);
+		if (!match) return null;
+
+		const location = {
+			lat: Number(match[1]),
+			lng: Number(match[2]),
+		};
+
+		if (Number.isNaN(location.lat) || Number.isNaN(location.lng)) return null;
+		return location;
+	}
+
+	private formatPx(px: Position): FormattedPosition {
+		return {
+			left: `${px.left}px`,
+			top: `${px.top}px`,
+		};
+	}
+
+	private locationToPx(locVal: Location): Position {
+		const latBoundsRange = this.latBounds.max - this.latBounds.min;
+		const lngBoundsRange = this.lngBounds.max - this.lngBounds.min;
+		const offset = this.parameters.primeMeridianOffset ?? [0, 0];
+
+		return {
+			left:
+				(this.wrapValue(
+						locVal.lng - this.lngBounds.min + offset[1],
+						lngBoundsRange
+					) /
+					lngBoundsRange) *
+				this.currentMap.width,
+			top:
+				(this.wrapValue(
+						-locVal.lat - this.latBounds.min + offset[0],
+						latBoundsRange
+					) /
+					latBoundsRange) *
+				this.currentMap.height,
+		};
+	}
+
+	private pxToLocation(px: Position): Location {
+		const latBoundsRange = this.latBounds.max - this.latBounds.min;
+		const lngBoundsRange = this.lngBounds.max - this.lngBounds.min;
+		const offset = this.parameters.primeMeridianOffset ?? [0, 0];
+
+		return {
+			lat:
+				-(
+					this.wrapValue(
+						(px.top / this.currentMap.height) * latBoundsRange - offset[0],
+						latBoundsRange
+					) + this.latBounds.min
+				),
+			lng:
+				this.wrapValue(
+					(px.left / this.currentMap.width) * lngBoundsRange - offset[1],
+					lngBoundsRange
+				) + this.lngBounds.min,
+		};
+	}
+
+	private mouseToPx(event: MouseEvent | PointerEvent, rect: DOMRect): Position {
+		return {
+			left: event.clientX - rect.left,
+			top: event.clientY - rect.top,
+		};
+	}
+
+	private wrapValue(n: number, m: number): number {
+		return ((n % m) + m) % m;
+	}
 }

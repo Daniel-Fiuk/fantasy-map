@@ -1,13 +1,14 @@
-import { Pin, clearTimeOut } from "./pinInteractions";
 import { App, Component, MarkdownRenderer } from "obsidian";
+import type { Pin } from "./pinInteractions";
 
 let currentPreview: HTMLElement | null = null;
+let clearHoverDelay: (() => void) | null = null;
 
 export async function showCustomPreview(
 	pin: Pin,
 	app: App,
 	component: Component,
-	event: MouseEvent
+	event: MouseEvent | PointerEvent
 ) {
 	if (!currentPreview) {
 		currentPreview = document.body.createDiv({
@@ -35,25 +36,14 @@ export async function showCustomPreview(
 	titleLink.onclick = (e) => {
 		e.preventDefault();
 		e.stopPropagation();
-		app.workspace.openLinkText(
-			pin.note.path,
-			pin.note.path,
-			e.ctrlKey || e.metaKey
-		);
+		app.workspace.openLinkText(pin.note.path, pin.note.path, e.ctrlKey || e.metaKey);
 	};
 
 	const contentEl = container.createDiv({ cls: "fm-hover-content" });
 	const fileText = await app.vault.read(pin.note);
 	const body = stripFrontmatter(fileText);
 
-	await MarkdownRenderer.render(
-		app,
-		body,
-		contentEl,
-		pin.note.path,
-		component
-	);
-
+	await MarkdownRenderer.render(app, body, contentEl, pin.note.path, component);
 	wirePreviewLinks(contentEl, app, pin.note.path);
 
 	const rect = pin.element.getBoundingClientRect();
@@ -65,6 +55,10 @@ export async function showCustomPreview(
 	});
 
 	container.addClass("is-visible");
+}
+
+export function setPreviewTimeoutClearer(clearer: (() => void) | null): void {
+	clearHoverDelay = clearer;
 }
 
 export function hideCustomPreview() {
@@ -87,7 +81,6 @@ function stripFrontmatter(text: string): string {
 			return text.slice(end + 4).trimStart();
 		}
 	}
-
 	return text;
 }
 
@@ -95,7 +88,7 @@ function attachPreviewHoverHandlers() {
 	if (!currentPreview) return;
 
 	currentPreview.onmouseenter = () => {
-		clearTimeOut();
+		clearHoverDelay?.();
 	};
 
 	currentPreview.onmouseleave = () => {
@@ -124,11 +117,7 @@ function wirePreviewLinks(
 			e.preventDefault();
 			e.stopPropagation();
 
-			app.workspace.openLinkText(
-				linktext,
-				sourcePath,
-				e.ctrlKey || e.metaKey
-			);
+			app.workspace.openLinkText(linktext, sourcePath, e.ctrlKey || e.metaKey);
 		};
 	});
 

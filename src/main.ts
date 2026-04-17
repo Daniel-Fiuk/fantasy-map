@@ -1,16 +1,27 @@
 // noinspection JSUnusedGlobalSymbols
 
-import { MarkdownPostProcessorContext, Component, Plugin, TFile } from "obsidian";
-import { DEFAULT_SETTINGS, FantasyMapSettings, FantasyMapSettingTab } from "./settings";
+import {
+	MarkdownPostProcessorContext,
+	Component,
+	Plugin,
+	TFile,
+} from "obsidian";
+import {
+	DEFAULT_SETTINGS,
+	FantasyMapSettings,
+	FantasyMapSettingTab,
+} from "./settings";
 import { parseFantasyMapParams, fantasyMapHelpMessage } from "./paramaters";
-import { initMapInteractions } from "./mapInteractions";
-import { initPinInteractions } from "./pinInteractions";
-import { destroyCustomPreview } from "./previewInteractions";
+import { createMapInteractionController } from "./mapInteractions";
+import { createPinInteractionController } from "./pinInteractions";
+import {
+	destroyCustomPreview,
+	setPreviewTimeoutClearer,
+} from "./previewInteractions";
 
 export default class FantasyMap extends Plugin {
 	settings: FantasyMapSettings;
 
-	// called when the plugin is loaded
 	async onload() {
 		await this.loadSettings();
 
@@ -22,12 +33,10 @@ export default class FantasyMap extends Plugin {
 		);
 	}
 
-	// called when the plugin is unloaded
 	onunload() {
 		destroyCustomPreview();
 	}
 
-	// loads plugin settings
 	async loadSettings() {
 		this.settings = Object.assign(
 			{},
@@ -36,12 +45,15 @@ export default class FantasyMap extends Plugin {
 		);
 	}
 
-	// saves plugin settings
 	async saveSettings() {
 		await this.saveData(this.settings);
 	}
 
-	async main(source: string, element: HTMLElement, ctx: MarkdownPostProcessorContext) {
+	async main(
+		source: string,
+		element: HTMLElement,
+		ctx: MarkdownPostProcessorContext
+	) {
 		const parameters = parseFantasyMapParams(
 			this.app,
 			source,
@@ -56,7 +68,10 @@ export default class FantasyMap extends Plugin {
 		const mapFile: TFile | null = (() => {
 			const normalized = parameters.map.replace(/^\[\[|\]\]$/g, "").trim();
 
-			const linked = this.app.metadataCache.getFirstLinkpathDest(normalized, ctx.sourcePath);
+			const linked = this.app.metadataCache.getFirstLinkpathDest(
+				normalized,
+				ctx.sourcePath
+			);
 			if (linked instanceof TFile) return linked;
 
 			const abs = this.app.vault.getAbstractFileByPath(normalized);
@@ -80,8 +95,10 @@ export default class FantasyMap extends Plugin {
 		element.empty();
 		element.addClass("fantasy-map-container");
 
-		const mapWrapper = element.createEl("div", { cls: "fantasy-map-wrapper" });
+		const renderComponent = new Component();
+		(this as Component).addChild(renderComponent);
 
+		const mapWrapper = element.createEl("div", { cls: "fantasy-map-wrapper" });
 		const bgLayer = mapWrapper.createEl("div", { cls: "fantasy-map-background" });
 		const tilesLayer = mapWrapper.createEl("div", { cls: "fantasy-map-tiles" });
 
@@ -108,7 +125,6 @@ export default class FantasyMap extends Plugin {
 
 		mapImg.onload = async () => {
 			const ratio = mapImg.naturalHeight / mapImg.naturalWidth;
-
 			const wrapperWidth = mapWrapper.clientWidth;
 			const baseHeight = wrapperWidth * ratio;
 
@@ -141,28 +157,55 @@ export default class FantasyMap extends Plugin {
 
 			positionTiles(tilesLayer);
 
-			initMapInteractions(
-				this.app,
-				mapWrapper,
+			let mapController: ReturnType<typeof createMapInteractionController> | null =
+				null;
+
+			const pinController = createPinInteractionController({
+				app: this.app,
+				component: renderComponent,
+				wrapper: mapWrapper,
+				parameters,
+				ctx,
+				setMapPanningEnabled: (enabled: boolean) => {
+					mapController?.setPanningEnabled(enabled);
+				},
+			});
+
+			await pinController.init();
+			setPreviewTimeoutClearer(() => pinController.clearHoverDelay());
+
+			mapController = createMapInteractionController({
+				wrapper: mapWrapper,
 				bgLayer,
 				tilesLayer,
 				toolbar,
 				parameters,
-				this.settings
-			);
+				settings: this.settings,
+				onViewportChanged: (offsetX, offsetY, tileWidth, tileHeight) => {
+					pinController.updatePinPositions(
+						offsetX,
+						offsetY,
+						tileWidth,
+						tileHeight
+					);
+				},
+				onInteractionStart: () => {
+					destroyCustomPreview();
+					pinController.clearHoverDelay();
+				},
+			});
 
-			await initPinInteractions(
-				this.app,
-				this,
-				mapWrapper,
-				parameters,
-				element,
-				ctx
-			);
+			mapController.init();
+
+			renderComponent.register(() => {
+				setPreviewTimeoutClearer(null);
+				mapController?.destroy();
+				pinController.destroy();
+			});
 		};
 
-		function positionTiles(tilesLayer: HTMLElement) {
-			const tiles = Array.from(tilesLayer.querySelectorAll(".fm-tile"));
+		function positionTiles(tilesLayerEl: HTMLElement) {
+			const tiles = Array.from(tilesLayerEl.querySelectorAll(".fm-tile"));
 
 			tiles.forEach((tile) => {
 				const tileEl = tile as HTMLElement;
