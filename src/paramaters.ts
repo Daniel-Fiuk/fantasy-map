@@ -11,7 +11,7 @@ export interface FantasyMapParams {
 	repeat?: string;
 	latitudeRange?: [number, number];
 	longitudeRange?: [number, number];
-	longitudeOffset?: number;
+	primeMeridianOffset?: [number, number];
 }
 
 const mapHelpMessageString =
@@ -32,8 +32,8 @@ const latitudeRangeHelpMessageString =
 	"**\"Latitude Range\"** (optional): The latitude bounds as \"(min, max)\" – default: \"(-90, 90)\"";
 const longitudeRangeHelpMessageString =
 	"**\"Longitude Range\"** (optional): The longitude bounds as \"(min, max)\" – default: \"(0, 360)\"";
-const longitudeOffsetHelpMessageString =
-	"**\"Longitude Offset\"** (optional): Offset for longitude values – default: \"0\"";
+const primeMeridianOffsetHelpMessageString =
+	"**\"Prime Meridian Offset\"** (optional): Offset for latitude and longitude values – default: \"(0, 0)\"";
 const helpHelpMessageString =
 	"**\"Help, -H, Info, Instruction, -I, or Usage\"**: Include one of these keywords to display usage instructions";
 
@@ -53,6 +53,7 @@ function allHelpMessages(settings: FantasyMapSettings): string[] {
 		repeatHelpMessageString,
 		latitudeRangeHelpMessageString,
 		longitudeRangeHelpMessageString,
+		primeMeridianOffsetHelpMessageString,
 		helpHelpMessageString,
 	];
 }
@@ -67,6 +68,7 @@ export const fantasyMapCodeBlockCopyToClipboardString = [
 	"Repeat:",
 	"Latitude Range:",
 	"Longitude Range:",
+	"Prime Meridian Offset:",
 	"```",
 ].join("\n");
 
@@ -190,7 +192,8 @@ export function parseFantasyMapParams(
 							`default: "${settings.defaultPinSize}"`
 						)
 					)
-				) break;
+				) break
+				if (value.length == 0) break;
 				if (!isValidPinSize(value)) {
 					addHelpMessage(
 						"Fantasy Map Error: Pin Size value is invalid! Examples: '24px', '1.5rem', '5%'."
@@ -216,16 +219,15 @@ export function parseFantasyMapParams(
 				params.defaultZoomLevel = Number(value) > 0 ? Number(value) : 1;
 				break;
 
-			case "defaultlocation": {
+			case "defaultlocation": 
 				if (checkForHelp(defaultLocationHelpMessageString)) break;
 				const match = value.match(/\((-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)\)/);
 				if (match) {
 					params.defaultLocation = [Number(match[1]), Number(match[2])];
 				}
 				break;
-			}
 
-			case "repeat": {
+			case "repeat": 
 				if (checkForHelp(repeatHelpMessageString)) break;
 				const normalizedValue = value.toLowerCase();
 
@@ -242,33 +244,20 @@ export function parseFantasyMapParams(
 					params.repeat = "no-repeat";
 				}
 				break;
-			}
 
 			case "latituderange":
-			case "longituderange": {
-				if (
-					checkForHelp(
-						key === "latituderange"
-							? latitudeRangeHelpMessageString
-							: longitudeRangeHelpMessageString
-					)
-				) break;
-
-				const match = value.match(/\((-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)\)/);
-				if (match) {
-					const parsed: [number, number] = [Number(match[1]), Number(match[2])];
-					if (key === "latituderange") {
-						params.latitudeRange = parsed;
-					} else {
-						params.longitudeRange = parsed;
-					}
-				}
+				checkForHelp(latitudeRangeHelpMessageString);
+				params.latitudeRange = parseCoords(value, [-90, 90]);
 				break;
-			}
-
-			case "longitudeoffset":
-				if (checkForHelp(longitudeOffsetHelpMessageString)) break;
-				params.longitudeOffset = Number(value) || 0;
+				
+			case "longituderange": 
+				checkForHelp(latitudeRangeHelpMessageString);
+				params.longitudeRange = parseCoords(value, [0, 360]);
+				break;
+				
+			case "primemeridianoffset": 
+				checkForHelp(latitudeRangeHelpMessageString);
+				params.primeMeridianOffset = parseCoords(value, [0, 0]);
 				break;
 				
 			default:
@@ -289,7 +278,7 @@ export function parseFantasyMapParams(
 	if (params.repeat == null) params.repeat = "no-repeat";
 	if (params.latitudeRange == null) params.latitudeRange = [-90, 90];
 	if (params.longitudeRange == null) params.longitudeRange = [0, 360];
-	if (params.longitudeOffset == null) params.longitudeOffset = 0;
+	if (params.primeMeridianOffset == null) params.primeMeridianOffset = [0, 0];
 
 	if (helpMessages.length > 0) {
 		void fantasyMapHelpMessage(
@@ -303,6 +292,11 @@ export function parseFantasyMapParams(
 	}
 
 	return params as FantasyMapParams;
+}
+
+function parseCoords(coords: string, defaultVal: [number, number]): [number, number] {
+	const match = coords.match(/\((-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)\)/);
+	return match ? [Number(match[1]), Number(match[2])] : defaultVal;
 }
 
 export function isValidPinSize(value: string): boolean {

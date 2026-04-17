@@ -12,6 +12,7 @@ export interface PanZoomState {
 }
 
 let isPanning = false;
+let panningEnabled = true;
 let lastX = 0;
 let lastY = 0;
 
@@ -49,7 +50,7 @@ export function initMapInteractions(
 			backgroundPosition: `${wrappedX}px ${wrappedY}px`,
 		});
 
-		updatePinPositions(state.offsetX, state.offsetY, tileWidth, tileHeight);
+		updatePinPositions(state.offsetX, state.offsetY, tileWidth, tileHeight, paramaters);
 	}
 
 	function clampOffsets() {
@@ -138,7 +139,7 @@ export function initMapInteractions(
 	});
 
 	wrapper.addEventListener("pointermove", (e) => {
-		if (!isPanning) return;
+		if (!isPanning || !panningEnabled) return;
 
 		const dx = e.clientX - lastX;
 		const dy = e.clientY - lastY;
@@ -154,7 +155,7 @@ export function initMapInteractions(
 	});
 
 	wrapper.addEventListener("pointerup", () => {
-		cancelMapPanning();
+		isPanning = false;
 	});
 
 	wrapper.addEventListener(
@@ -204,6 +205,6 @@ export function initMapInteractions(
 	reset();
 }
 
-export function cancelMapPanning() {
-	isPanning = false;
+export function enableMapPanning(enabled: boolean) {
+	panningEnabled = enabled;
 }

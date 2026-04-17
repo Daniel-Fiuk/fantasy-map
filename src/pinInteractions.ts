@@ -6,7 +6,7 @@ import {
 	TFile,
 } from "obsidian";
 import { FantasyMapParams } from "./paramaters";
-import { cancelMapPanning } from "./mapInteractions";
+import { enableMapPanning } from "./mapInteractions";
 import {
 	showCustomPreview,
 	hideCustomPreview,
@@ -38,8 +38,11 @@ export interface Pin {
 
 const Pins: Pin[] = [];
 let selectedPin: Pin | null = null;
-let enablePinDrag = false;
+
 let disablePreviews = false;
+
+let pinDragging = false;
+let pinDragStartPos: Position = { left: 0, top: 0 };
 
 let latBounds: { min: number; max: number } = { min: 0, max: 0 };
 let lngBounds: { min: number; max: number } = { min: 0, max: 0 };
@@ -63,7 +66,7 @@ export async function initPinInteractions(
 ) {
 	disablePreviews = false;
 	Pins.length = 0;
-
+	
 	const notes = app.vault.getMarkdownFiles();
 
 	currentMap.width = wrapper.clientWidth;
@@ -87,54 +90,67 @@ export async function initPinInteractions(
 	wrapper.addEventListener("pointermove", (e) => {
 		if (!selectedPin) return;
 
-		if (!enablePinDrag) {
-			selectedPin = null;
-			return;
-		}
+		if (!pinDragging) {
+			const currentPos = mouseToPx(e, wrapper.getBoundingClientRect());
+			const dx = currentPos.left - pinDragStartPos.left;
+			const dy = currentPos.top - pinDragStartPos.top;
+			const distanceSquared = dx * dx + dy * dy;
 
-		const formattedPx = formatPx(mouseToPx(e, wrapper.getBoundingClientRect()));
-		selectedPin.element.setCssStyles({
-			left: formattedPx.left,
-			top: formattedPx.top,
-		});
+			if (distanceSquared > 25) { // 5px threshold
+				pinDragging = true;
+			}
+		}
+		
+		else {
+			const formattedPx = formatPx(mouseToPx(e, wrapper.getBoundingClientRect()));
+			selectedPin.element.setCssStyles({
+				left: formattedPx.left,
+				top: formattedPx.top,
+			});
+		}
 	});
 
 	wrapper.addEventListener("pointerup", async (e) => {
 		if (!selectedPin) return;
 
-		if (enablePinDrag) {
+		if (pinDragging) {
 			const px = mouseToPx(e, wrapper.getBoundingClientRect());
 
 			px.left = wrapValue(px.left - currentMap.xOffset, currentMap.width);
 			px.top = wrapValue(px.top - currentMap.yOffset, currentMap.height);
 
-			selectedPin.location = pxToLocation(px);
+			selectedPin.location = pxToLocation(px, paramaters);
 
 			const pinToUpdate = selectedPin;
 			await app.fileManager.processFrontMatter(pinToUpdate.note, (frontmatter) => {
 				frontmatter["fm-location"] = formatLocation(pinToUpdate.location);
 			});
-		} else {
+		}
+		else {
 			disablePreviews = true;
 			destroyCustomPreview();
 			app.workspace.openLinkText(selectedPin.note.path, "", false);
 		}
 
-		enablePinDrag = false;
+		enableMapPanning(true);
 		selectedPin = null;
-
-		return;
+		pinDragging = false;
 	});
 
 	wrapper.addEventListener("pointerleave", () => {
-		if (enablePinDrag) {
-			enablePinDrag = false;
+		
+		if (pinDragging) {
+			pinDragging = false;
 			selectedPin = null;
+			
+			console.log("Pointer left map while dragging pin, cancelling drag and resetting pin position.");
+			
 			updatePinPositions(
 				currentMap.xOffset,
 				currentMap.yOffset,
 				currentMap.width,
-				currentMap.height
+				currentMap.height,
+				paramaters
 			);
 		}
 	});
@@ -144,30 +160,27 @@ export async function initPinInteractions(
 		const frontMatter = cache?.frontmatter;
 		if (!frontMatter) return;
 
-		const mapIDs = paramaters.mapIDs ?? [];
-		if (mapIDs.length > 0 && mapIDs[0] !== "") {
-			const mapId: unknown = frontMatter["fm-id"];
-			if (mapId !== undefined && !mapIDs.includes(String(mapId))) return;
-		}
-
 		const frontMatterLocation: unknown = frontMatter["fm-location"];
 		if (frontMatterLocation === undefined) return;
 
+		const mapIDs = paramaters.mapIDs ?? [];
+		if (mapIDs.length > 0 && mapIDs[0] !== "") {
+			const mapId: unknown = frontMatter["fm-id"];
+			if (!mapIDs.includes(String(mapId))) return;
+		}
+
 		const location = parseFormattedLocation(String(frontMatterLocation));
 		if (!location) return;
-
 		if (
 			location.lat < latBounds.min ||
 			location.lat > latBounds.max ||
 			location.lng < lngBounds.min ||
 			location.lng > lngBounds.max
-		) {
-			return;
-		}
+		) return;
 
 		const pinElement = wrapper.createEl("div", { cls: "map-pin" });
 
-		const formattedPx = formatPx(locationToPx(location));
+		const formattedPx = formatPx(locationToPx(location, paramaters));
 		pinElement.setCssStyles({
 			left: formattedPx.left,
 			top: formattedPx.top,
@@ -177,7 +190,7 @@ export async function initPinInteractions(
 
 		const pinIconValue: unknown = frontMatter["fm-pin-icon"];
 		const pinFile = resolvePinIconFile(app, pinIconValue, ctx.sourcePath);
-
+		
 		if (pinFile) {
 			if (pinFile.extension.toLowerCase() === "svg") {
 				pinIconEl.innerHTML = addSvgViewBoxPadding(
@@ -217,7 +230,7 @@ export async function initPinInteractions(
 			location,
 		};
 
-		initPinActions(newPin, app, component);
+		initPinActions(newPin, app, component, paramaters);
 		Pins.push(newPin);
 	}
 }
@@ -310,21 +323,25 @@ function formatPx(px: Position): FormattedPosition {
 	};
 }*/
 
-function locationToPx(locVal: Location): Position {
+function locationToPx(locVal: Location, paramaters: FantasyMapParams): Position {
+	const latBoundsRange = latBounds.max - latBounds.min;
+	const lngBoundsRange = lngBounds.max - lngBounds.min;
 	return {
 		left:
-			((locVal.lng - lngBounds.min) / (lngBounds.max - lngBounds.min)) *
+			(wrapValue(locVal.lng - lngBounds.min + paramaters.primeMeridianOffset[1], lngBoundsRange) / lngBoundsRange) *
 			currentMap.width,
 		top:
-			((-locVal.lat - latBounds.min) / (latBounds.max - latBounds.min)) *
+			(wrapValue(-locVal.lat - latBounds.min + paramaters.primeMeridianOffset[0], latBoundsRange) / latBoundsRange) *
 			currentMap.height,
 	};
 }
 
-function pxToLocation(px: Position): Location {
+function pxToLocation(px: Position, paramaters: FantasyMapParams): Location {
+	const latBoundsRange = latBounds.max - latBounds.min;
+	const lngBoundsRange = lngBounds.max - lngBounds.min;
 	return {
-		lat: -(px.top / currentMap.height * (latBounds.max - latBounds.min) + latBounds.min),
-		lng: px.left / currentMap.width * (lngBounds.max - lngBounds.min) + lngBounds.min,
+		lat: -(wrapValue(px.top / currentMap.height * latBoundsRange - paramaters.primeMeridianOffset[0], latBoundsRange) + latBounds.min),
+		lng: wrapValue(px.left / currentMap.width * lngBoundsRange - paramaters.primeMeridianOffset[1], lngBoundsRange) + lngBounds.min,
 	};
 }
 
@@ -343,7 +360,8 @@ export function updatePinPositions(
 	offsetX: number,
 	offsetY: number,
 	tileWidth: number,
-	tileHeight: number
+	tileHeight: number,
+	paramaters: FantasyMapParams
 ) {
 	currentMap.width = tileWidth;
 	currentMap.height = tileHeight;
@@ -353,7 +371,7 @@ export function updatePinPositions(
 	for (const pin of Pins) {
 		if (pin === selectedPin) continue;
 
-		const px = locationToPx(pin.location);
+		const px = locationToPx(pin.location, paramaters);
 
 		pin.element.setCssStyles({
 			left: `${wrapValue(px.left + offsetX, tileWidth)}px`,
@@ -376,7 +394,7 @@ export function clearTimeOut() {
 	}
 }
 
-function initPinActions(pin: Pin, app: App, component: Component) {
+function initPinActions(pin: Pin, app: App, component: Component, paramaters: FantasyMapParams) {
 	pin.element.addEventListener("pointerenter", (e) => {
 		if (selectedPin || disablePreviews) return;
 		startTimeOut(100, () => {
@@ -394,11 +412,10 @@ function initPinActions(pin: Pin, app: App, component: Component) {
 		if (selectedPin) return;
 
 		selectedPin = pin;
+		pinDragStartPos = locationToPx(pin.location, paramaters);
+		pinDragging = false;
+		
 		hideCustomPreview();
-
-		startTimeOut(100, () => {
-			cancelMapPanning();
-			enablePinDrag = true;
-		});
+		enableMapPanning(false);
 	});
 }
