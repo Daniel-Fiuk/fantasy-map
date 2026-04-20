@@ -133,8 +133,8 @@ class PinInteractionManager implements PinInteractionController {
 
 			await this.app.fileManager.processFrontMatter(
 				selectedPin.note,
-				(frontmatter) => {
-					frontmatter["fm-location"] = this.formatLocation(selectedPin.location);
+				(frontmatter: unknown) => {
+					frontmatter["fm-location"] = this.formatLocation(selectedPin.location) as string;
 				}
 			);
 		} else {
@@ -203,6 +203,8 @@ class PinInteractionManager implements PinInteractionController {
 		this.wrapper.addEventListener("pointermove", this.onWrapperPointerMove);
 		this.wrapper.addEventListener("pointerup", this.onWrapperPointerUp);
 		this.wrapper.addEventListener("pointerleave", this.onWrapperPointerLeave);
+		
+		return;
 	}
 
 	updatePinPositions(
