@@ -436,8 +436,7 @@ class PinInteractionManager implements PinInteractionController {
 	private addSvgViewBoxPadding(svg: string, pad: number): string {
 		return svg.replace(/viewBox="([^"]+)"/, (_, vb: string) => {
 			const [x, y, w, h] = vb.trim().split(/\s+/).map(Number);
-			if ([x, y, w, h].some(Number.isNaN) || [x, y, w, h].some((v) => v === undefined)) return `viewBox="${vb}"`;
-			
+			if ([x, y, w, h].some((v) => Number.isNaN(v) || v === undefined)) return `viewBox="${vb}"`;
 			return `viewBox="${x - pad} ${y - pad} ${w + pad * 2} ${h + pad * 2}"`;
 		});
 	}
