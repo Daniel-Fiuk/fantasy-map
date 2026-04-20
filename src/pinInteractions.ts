@@ -140,7 +140,7 @@ class PinInteractionManager implements PinInteractionController {
 		} else {
 			this.suppressPreview(200);
 			destroyCustomPreview();
-			this.app.workspace.openLinkText(selectedPin.note.path, "", false);
+			await this.app.workspace.openLinkText(selectedPin.note.path, "", false);  
 		}
 
 		this.setMapPanningEnabled(true);
