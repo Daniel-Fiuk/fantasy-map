@@ -29,7 +29,7 @@ export class FantasyMapSettingTab extends PluginSettingTab {
 		containerEl.empty();
 
 		new Setting(containerEl)
-			.setName("Default Pin Size")
+			.setName("Default pin size")
 			.setDesc(
 				"Set the default size for pins on the map (e.g. 24px, 1.5rem, 5%)."
 			)
@@ -58,7 +58,7 @@ export class FantasyMapSettingTab extends PluginSettingTab {
 			});
 
 		new Setting(containerEl)
-			.setName("Default Zoom Increment")
+			.setName("Default zoom increment")
 			.setDesc(
 				"Set the default zoom increment for the map (e.g. 1 means each zoom step will increase/decrease the zoom level by 1)."
 			)
@@ -109,7 +109,7 @@ export class FantasyMapSettingTab extends PluginSettingTab {
 			});
 
 		new Setting(containerEl)
-			.setName("Template Note Front Matter")
+			.setName("Template note front matter")
 			.setDesc("Copy this into a note to pin a note to your map.")
 			.addTextArea((text) => {
 				text.setValue(fantasyMapFrontMatterCopyToClipboardString);

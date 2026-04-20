@@ -89,22 +89,18 @@ class MapInteractionManager implements MapInteractionController {
 	private readonly onWheel = (e: WheelEvent) => {
 		e.preventDefault();
 
-		const zoomStep = this.toolbar.querySelector(".fm-zoom-step") as
-			| HTMLInputElement
-			| null;
-		const zoomValue = Number(zoomStep?.value);
+		const stepInput = this.toolbar.querySelector<HTMLInputElement>(".fm-zoom-step");
+		const stepValue = Number(stepInput?.value);
 		const base =
 			1 +
-			(isNaN(zoomValue) ? this.settings.defaultZoomIncrement : zoomValue) * 0.1;
+			(isNaN(stepValue) ? this.settings.defaultZoomIncrement : stepValue) * 0.1;
 
 		const factor = e.deltaY < 0 ? base : 1 / base;
 		this.zoomAt(e.clientX, e.clientY, factor);
 	};
 
 	private readonly onZoomInClick = () => {
-		const stepInput = this.toolbar.querySelector(".fm-zoom-step") as
-			| HTMLInputElement
-			| null;
+		const stepInput = this.toolbar.querySelector<HTMLInputElement>(".fm-zoom-step");
 		const stepValue = Number(stepInput?.value);
 		const step =
 			Math.abs(stepValue) ||
@@ -115,9 +111,7 @@ class MapInteractionManager implements MapInteractionController {
 	};
 
 	private readonly onZoomOutClick = () => {
-		const stepInput = this.toolbar.querySelector(".fm-zoom-step") as
-			| HTMLInputElement
-			| null;
+		const stepInput = this.toolbar.querySelector<HTMLInputElement>(".fm-zoom-step");
 		const stepValue = Number(stepInput?.value);
 		const step =
 			Math.abs(stepValue) ||

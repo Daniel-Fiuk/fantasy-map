@@ -154,7 +154,7 @@ export function parseFantasyMapParams(
 			element,
 			compileHelpMessages(
 				allHelpMessages(settings),
-				"##### Available Fantasy Map Parameters:"
+				"##### Available Fantasy-Map parameters:"
 			),
 			true,
 			ctx.sourcePath,
@@ -225,7 +225,7 @@ export function parseFantasyMapParams(
 
 				if (!isValidPinSize(value)) {
 					addHelpMessage(
-						"Fantasy Map Error: Pin Size value is invalid! Examples: '24px', '1.5rem', '5%', '10vw', or '0'."
+						"Fantasy-Map error: Pin size value is invalid! Examples: '24px', '1.5rem', '5%', '10vw', or '0'."
 					);
 					break;
 				}
@@ -292,7 +292,7 @@ export function parseFantasyMapParams(
 				break;
 
 			default:
-				console.warn(`Unknown Fantasy Map parameter: "${rawKey}"`);
+				console.warn(`Unknown Fantasy-Map parameter: "${rawKey}"`);
 				addHelpMessage(
 					`Unknown parameter: "${rawKey}"! Please check for typos and make sure you are using the correct parameter names.`
 				);
@@ -321,7 +321,7 @@ export function parseFantasyMapParams(
 		void fantasyMapHelpMessage(
 			app,
 			element,
-			compileHelpMessages(helpMessages, "##### Fantasy Map Help Messages:"),
+			compileHelpMessages(helpMessages, "##### Fantasy-Map help messages:"),
 			true,
 			ctx.sourcePath,
 			component
