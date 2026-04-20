@@ -1,6 +1,7 @@
 import {
 	App,
 	Component,
+	FrontMatterCache,
 	MarkdownPostProcessorContext,
 	normalizePath,
 	TFile,
