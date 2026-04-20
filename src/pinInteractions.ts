@@ -132,8 +132,7 @@ class PinInteractionManager implements PinInteractionController {
 			selectedPin.location = this.pxToLocation(px);
 
 			await this.app.fileManager.processFrontMatter(
-				selectedPin.note,
-				(frontmatter: unknown) => {
+				selectedPin.note, (frontmatter: FrontMatterCache ) => {
 					frontmatter["fm-location"] = this.formatLocation(selectedPin.location) as string;
 				}
 			);
@@ -259,7 +258,7 @@ class PinInteractionManager implements PinInteractionController {
 		const frontMatter = cache?.frontmatter;
 		if (!frontMatter) return;
 
-		const frontMatterLocation: unknown = frontMatter["fm-location"];
+		const frontMatterLocation: string = frontMatter["fm-location"];
 		if (frontMatterLocation === undefined) return;
 
 		const mapIDs = this.parameters.mapIDs ?? [];
