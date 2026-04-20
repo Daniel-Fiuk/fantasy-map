@@ -133,7 +133,7 @@ class PinInteractionManager implements PinInteractionController {
 			selectedPin.location = this.pxToLocation(px);
 
 			await this.app.fileManager.processFrontMatter(
-				selectedPin.note, (frontmatter) => {
+				selectedPin.note, (frontmatter: FrontMatterCache) => {
 					frontmatter["fm-location"] = this.formatLocation(selectedPin.location) as string;
 				}
 			);
@@ -259,7 +259,7 @@ class PinInteractionManager implements PinInteractionController {
 		const frontMatter = cache?.frontmatter;
 		if (!frontMatter) return;
 
-		const frontMatterLocation: string = frontMatter["fm-location"];
+		const frontMatterLocation = frontMatter["fm-location"] as string;
 		if (frontMatterLocation === undefined) return;
 
 		const mapIDs = this.parameters.mapIDs ?? [];
@@ -434,7 +434,7 @@ class PinInteractionManager implements PinInteractionController {
 	}
 
 	private addSvgViewBoxPadding(svg: string, pad: number): string {
-		return svg.replace(/viewBox="([^"]+)"/, (_, vb) => {
+		return svg.replace(/viewBox="([^"]+)"/, (_, vb: string) => {
 			const [x, y, w, h] = vb.trim().split(/\s+/).map(Number);
 			if ([x, y, w, h].some(Number.isNaN)) return `viewBox="${vb}"`;
 			return `viewBox="${x - pad} ${y - pad} ${w + pad * 2} ${h + pad * 2}"`;

@@ -321,7 +321,7 @@ export function parseFantasyMapParams(
 		void fantasyMapHelpMessage(
 			app,
 			element,
-			compileHelpMessages(helpMessages, "##### fantasy-map help messages:"),
+			compileHelpMessages(helpMessages, "##### Fantasy-map help messages:"),
 			true,
 			ctx.sourcePath,
 			component
@@ -370,7 +370,7 @@ export async function fantasyMapHelpMessage(
 }
 
 export function appendCopyLink(container: HTMLElement) {
-	const wrapper = container.createDiv({ cls: "fantasy-map-copy-link" });
+	const wrapper = container.createDiv({ cls: "Fantasy-map-copy-link" });
 	const link = wrapper.createEl("a", {
 		text: "Copy fantasy-map template",
 		href: "#",
@@ -386,12 +386,12 @@ export function appendCopyLink(container: HTMLElement) {
 		try {
 			await navigator.clipboard.writeText(fantasyMapCodeBlockCopyToClipboardString);
 			link.setText("Copied");
-			new Notice("fantasy-map template copied");
+			new Notice("Fantasy-map template copied");
 			window.setTimeout(() => {
 				link.setText("Copy fantasy-map template");
 			}, 1500);
 		} catch (err) {
-			console.warn("fantasy-map copy failed", err);
+			console.warn("Fantasy-map copy failed", err);
 			new Notice("Failed to copy fantasy-map template");
 		}
 	}
