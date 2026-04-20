@@ -21,37 +21,37 @@ export interface FantasyMapParams {
 }
 
 const mapHelpMessageString =
-	"**\"Map\"** (**required**): The name of the map asset to display - supports relative paths, absolute paths, and bare filenames (e.g. \"World Map.svg\") - the file must be located somewhere in your vault - supported file types are SVG, PNG, JPG, JPEG, WEBP, and GIF";
+	"**\"map\"** (**required**): The name of the map asset to display - supports relative paths, absolute paths, and bare filenames (e.g. \"World Map.svg\") - the file must be located somewhere in your vault - supported file types are SVG, PNG, JPG, JPEG, WEBP, and GIF";
 
 const mapIDsHelpMessageString =
-	"**\"Map IDs\"** (optional): A comma-separated list of IDs that define which pins with the same ID can appear on the map (e.g. \"river, mountain\"); if not specified, all pins will be displayed on the map regardless of their ID";
+	"**\"id\"** (optional): A comma-separated list of IDs that define which pins with the same ID can appear on the map (e.g. \"river, mountain\"); if not specified, all pins will be displayed on the map regardless of their ID";
 
 const pinSizeHelpMessageString =
-	"**\"Pin Size\"** (optional): The size of the pins on the map, specifically the width of the pin element (e.g. \"24px\", \"1.5em\", \"5%\") – default: \"24px\", can be adjusted in the plugin settings window";
+	"**\"pin size\"** (optional): The size of the pins on the map, specifically the width of the pin element (e.g. \"24px\", \"1.5em\", \"5%\") – default: \"24px\", can be adjusted in the plugin settings window";
 
 const defaultZoomIncrementHelpMessageString =
-	"**\"Default Zoom Increment\"** (optional): The zoom increment amount – default: \"1\", can be adjusted in the plugin settings window";
+	"**\"default zoom increment\"** (optional): The zoom increment amount – default: \"1\", can be adjusted in the plugin settings window";
 
 const defaultZoomLevelHelpMessageString =
-	"**\"Default Zoom Level\"** (optional): The initial zoom level when the map is first loaded – default: \"1\"";
+	"**\"default zoom level\"** (optional): The initial zoom level when the map is first loaded – default: \"1\"";
 
 const defaultLocationHelpMessageString =
-	"**\"Default Location\"** (optional): The initial focused coordinates for the map on load \"(latitude, longitude)\" – default: \"(0, 0)\"";
+	"**\"default location\"** (optional): The initial focused coordinates for the map on load \"(latitude, longitude)\" – default: \"(0, 0)\"";
 
 const repeatHelpMessageString =
-	"**\"Repeat\"** (optional): Indicates if the map should be repeated horizontally, vertically, or in both directions. Use ver/vertical/y, hor/horizontal/x, or both/b – default: \"no-repeat\"";
+	"**\"repeat\"** (optional): Indicates if the map should be repeated horizontally, vertically, or in both directions. Use ver/vertical/y, hor/horizontal/x, or both/b – default: \"no-repeat\"";
 
 const latitudeRangeHelpMessageString =
-	"**\"Latitude Range\"** (optional): The latitude bounds as \"(min, max)\" – default: \"(-90, 90)\"";
+	"**\"latitude range\"** (optional): The latitude bounds as \"(min, max)\" – default: \"(-90, 90)\"";
 
 const longitudeRangeHelpMessageString =
-	"**\"Longitude Range\"** (optional): The longitude bounds as \"(min, max)\" – default: \"(0, 360)\"";
+	"**\"longitude range\"** (optional): The longitude bounds as \"(min, max)\" – default: \"(0, 360)\"";
 
 const primeMeridianOffsetHelpMessageString =
-	"**\"Prime Meridian Offset\"** (optional): Offset for latitude and longitude values as \"(latOffset, lngOffset)\" – default: \"(0, 0)\"";
+	"**\"prime meridian offset\"** (optional): Offset for latitude and longitude values as \"(latOffset, lngOffset)\" – default: \"(0, 0)\"";
 
 const helpHelpMessageString =
-	"**\"Help, -H, Info, Instruction, -I, or Usage\"**: Include one of these keywords to display usage instructions";
+	"**\"help, -h, onfo, instruction, -i, or usage\"**: Include one of these keywords to display usage instructions";
 
 function allHelpMessages(settings: FantasyMapSettings): string[] {
 	return [
@@ -76,17 +76,17 @@ function allHelpMessages(settings: FantasyMapSettings): string[] {
 }
 
 export const fantasyMapCodeBlockCopyToClipboardString = [
-	"```Fantasy-Map",
-	"Map:",
-	"MapIDs:",
-	"PinSize:",
-	"Default Zoom Increment:",
-	"Default Zoom Level:",
-	"Default Location:",
-	"Repeat:",
-	"Latitude Range:",
-	"Longitude Range:",
-	"Prime Meridian Offset:",
+	"```fantasy-map",
+	"map:",
+	"id:",
+	"pin size:",
+	"default zoom increment:",
+	"default zoom level:",
+	"default location:",
+	"repeat:",
+	"latitude range:",
+	"longitude range:",
+	"prime meridian offset:",
 	"```",
 ].join("\n");
 
@@ -154,7 +154,7 @@ export function parseFantasyMapParams(
 			element,
 			compileHelpMessages(
 				allHelpMessages(settings),
-				"##### Available Fantasy-Map parameters:"
+				"##### Available fantasy-map parameters:"
 			),
 			true,
 			ctx.sourcePath,
@@ -201,7 +201,7 @@ export function parseFantasyMapParams(
 				params.map = value;
 				break;
 
-			case "mapids":
+			case "id":
 				if (checkForHelp(mapIDsHelpMessageString)) break;
 				params.mapIDs = value
 					.split(",")
@@ -225,7 +225,7 @@ export function parseFantasyMapParams(
 
 				if (!isValidPinSize(value)) {
 					addHelpMessage(
-						"Fantasy-Map error: Pin size value is invalid! Examples: '24px', '1.5rem', '5%', '10vw', or '0'."
+						"fantasy-map error: Pin size value is invalid! Examples: '24px', '1.5rem', '5%', '10vw', or '0'."
 					);
 					break;
 				}
@@ -292,7 +292,7 @@ export function parseFantasyMapParams(
 				break;
 
 			default:
-				console.warn(`Unknown Fantasy-Map parameter: "${rawKey}"`);
+				console.warn(`Unknown fantasy-map parameter: "${rawKey}"`);
 				addHelpMessage(
 					`Unknown parameter: "${rawKey}"! Please check for typos and make sure you are using the correct parameter names.`
 				);
@@ -321,7 +321,7 @@ export function parseFantasyMapParams(
 		void fantasyMapHelpMessage(
 			app,
 			element,
-			compileHelpMessages(helpMessages, "##### Fantasy-Map help messages:"),
+			compileHelpMessages(helpMessages, "##### fantasy-map help messages:"),
 			true,
 			ctx.sourcePath,
 			component
@@ -372,7 +372,7 @@ export async function fantasyMapHelpMessage(
 export function appendCopyLink(container: HTMLElement) {
 	const wrapper = container.createDiv({ cls: "fantasy-map-copy-link" });
 	const link = wrapper.createEl("a", {
-		text: "Copy Fantasy-Map template",
+		text: "Copy fantasy-map template",
 		href: "#",
 	});
 
@@ -386,13 +386,13 @@ export function appendCopyLink(container: HTMLElement) {
 		try {
 			await navigator.clipboard.writeText(fantasyMapCodeBlockCopyToClipboardString);
 			link.setText("Copied");
-			new Notice("Fantasy-Map template copied");
+			new Notice("fantasy-map template copied");
 			window.setTimeout(() => {
-				link.setText("Copy Fantasy-Map template");
+				link.setText("Copy fantasy-map template");
 			}, 1500);
 		} catch (err) {
-			console.warn("Fantasy-Map copy failed", err);
-			new Notice("Failed to copy Fantasy-Map template");
+			console.warn("fantasy-map copy failed", err);
+			new Notice("Failed to copy fantasy-map template");
 		}
 	}
 }

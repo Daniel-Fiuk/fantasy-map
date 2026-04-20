@@ -28,7 +28,7 @@ export default class FantasyMap extends Plugin {
 		this.addSettingTab(new FantasyMapSettingTab(this.app, this));
 
 		this.registerMarkdownCodeBlockProcessor(
-			"Fantasy-Map",
+			"fantasy-map",
 			this.main.bind(this)
 		);
 	}
