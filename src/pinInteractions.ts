@@ -439,7 +439,8 @@ class PinInteractionManager implements PinInteractionController {
 			if (parts.length !== 4 || parts.some(value => value === undefined || Number.isNaN(value))) {
 				return `viewBox="${vb}"`;
 			}
-			
+
+			const [x, y, w, h] = parts;
 			x ??= 0;
 			y ??= 0;
 			w ??= 500;
