@@ -440,7 +440,7 @@ class PinInteractionManager implements PinInteractionController {
 				return `viewBox="${vb}"`;
 			}
 
-			const [x, y, w, h] = parts ??= [0, 0, 500, 500];
+			const [x, y, w, h] = parts !== undefined ? parts : [0, 0, 500, 500];
 			return `viewBox="${x - pad} ${y - pad} ${w + pad * 2} ${h + pad * 2}"`;
 		});
 	}
