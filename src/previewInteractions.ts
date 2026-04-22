@@ -32,8 +32,7 @@ export async function showCustomPreview(
 	const frontMatterLocation = frontMatter ? frontMatter["fm-location"] as string : "";
 	
 	const subHeaderEl = container.createDiv({ cls: "fm-hover-header" });
-
-	const locationSubTitleEl = subHeaderEl.createEl("code", {
+	subHeaderEl.createEl("code", {
 		cls: "",
 		text: frontMatterLocation,
 	})
