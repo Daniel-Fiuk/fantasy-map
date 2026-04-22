@@ -33,7 +33,7 @@ export async function showCustomPreview(
 		pin.note.path
 	);
 
-	titleLink.onclick = (e) => {
+	titleLink.onclick = async (e) => {
 		e.preventDefault();
 		e.stopPropagation();
 		await app.workspace.openLinkText(pin.note.path, pin.note.path, e.ctrlKey || e.metaKey);
