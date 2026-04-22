@@ -159,7 +159,7 @@
 .fantasy-map-hover-preview {
 	position: fixed;
 	width: min(520px, calc(100vw - 24px));
-	max-height: 320px;
+	height: fit-content;
 	padding: 12px 14px;
 	border-radius: 8px;
 

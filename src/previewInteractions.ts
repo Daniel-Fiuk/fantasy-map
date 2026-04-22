@@ -21,11 +21,22 @@ export async function showCustomPreview(
 	container.empty();
 
 	const headerEl = container.createDiv({ cls: "fm-hover-header" });
-
+	
 	const titleLink = headerEl.createEl("a", {
 		cls: "internal-link fm-hover-title",
 		text: pin.note.basename,
 	});
+
+	const cache = app.metadataCache.getFileCache(pin.note);
+	const frontMatter = cache?.frontmatter;
+	const frontMatterLocation = frontMatter ? frontMatter["fm-location"] as string : "";
+	
+	const subHeaderEl = container.createDiv({ cls: "fm-hover-header" });
+
+	const locationSubTitleEl = subHeaderEl.createEl("code", {
+		cls: "",
+		text: frontMatterLocation,
+	})
 
 	titleLink.setAttr("href", pin.note.path);
 	titleLink.dataset.href = app.metadataCache.fileToLinktext(
@@ -38,7 +49,7 @@ export async function showCustomPreview(
 		e.stopPropagation();
 		await app.workspace.openLinkText(pin.note.path, pin.note.path, e.ctrlKey || e.metaKey);
 	};
-
+	
 	const contentEl = container.createDiv({ cls: "fm-hover-content" });
 	const fileText = await app.vault.read(pin.note);
 	const body = stripFrontmatter(fileText);

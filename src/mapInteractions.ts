@@ -1,5 +1,5 @@
-import { FantasyMapParams } from "./paramaters";
-import { FantasyMapSettings } from "./settings";
+import type { FantasyMapParams } from "./paramaters";
+import type { FantasyMapSettings } from "./settings";
 
 export interface PanZoomState {
 	zoom: number;
@@ -284,12 +284,15 @@ class MapInteractionManager implements MapInteractionController {
 		const lngMax = this.parameters.longitudeRange[1] ?? 360;
 		const lngRng = lngMax - lngMin;
 		
+		const defaultLatitude = -this.parameters.defaultLocation[0];
+		const defaultLongitude = this.parameters.defaultLocation[1];
+		
 		// find default position for map element
-		const defaultLeft = (this.parameters.defaultLocation[1] - this.parameters.primeMeridianOffset[1] - lngMin) / lngRng * worldW + (viewW / 2);
-		const defaulyTop = (this.parameters.defaultLocation[0] - this.parameters.primeMeridianOffset[0] - latMin) / latRng * worldH + (viewH / 2);
+		const defaultLeft = -(defaultLongitude + this.parameters.primeMeridianOffset[1] - lngMin) / lngRng * worldW + (viewW / 2);
+		const defaultTop = -(defaultLatitude + this.parameters.primeMeridianOffset[0] - latMin) / latRng * worldH + (viewH / 2);
 
 		this.state.offsetX = defaultLeft;
-		this.state.offsetY = defaulyTop;
+		this.state.offsetY = defaultTop;
 		
 		this.clampOffsets();
 		this.applyTransform();
