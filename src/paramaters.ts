@@ -11,6 +11,7 @@ export interface FantasyMapParams {
 	map: string;
 	mapIDs: string[];
 	pinSize: string;
+	zoomRange: [number, number];
 	defaultZoomIncrement: number;
 	defaultZoomLevel: number;
 	defaultLocation: [number, number];
@@ -21,50 +22,48 @@ export interface FantasyMapParams {
 }
 
 const mapHelpMessageString =
-	"**\"map\"** (**required**): The name of the map asset to display - supports relative paths, absolute paths, and bare filenames (e.g. \"World Map.svg\") - the file must be located somewhere in your vault - supported file types are SVG, PNG, JPG, JPEG, WEBP, and GIF";
+	"**\"map\"** (**required**): The name of the map asset to display. Supports relative paths, absolute paths, and bare filenames (e.g. \"World Map.svg\"). The file must be located somewhere in your vault. Supported file types are SVG, PNG, JPG, JPEG, WEBP, and GIF.";
 
 const mapIDsHelpMessageString =
-	"**\"id\"** (optional): A comma-separated list of IDs that define which pins with the same ID can appear on the map (e.g. \"river, mountain\"); if not specified, all pins will be displayed on the map regardless of their ID";
+	"**\"id\"** (optional): A comma-separated list of IDs that determines which pins can appear on the map when they share the same ID (e.g. \"river, mountain\"). If not specified, all pins will be displayed on the map regardless of ID.";
 
 const pinSizeHelpMessageString =
-	"**\"pin size\"** (optional): The size of the pins on the map, specifically the width of the pin element (e.g. \"24px\", \"1.5em\", \"5%\") – default: \"24px\", can be adjusted in the plugin settings window";
+	"**\"pin size\"** (optional): The size of the pins on the map, specifically the width of the pin element (e.g. \"24px\", \"1.5em\", \"5%\"). Default: \"24px\". This can be adjusted in the plugin settings window.";
+
+const zoomRangeHelpMessageString =
+	"**\"zoom range\"** (optional): The zoom range controls how much a user can zoom in or out on the map element (e.g. (min, max)). Default: (1, 15), where zoom level 1 shows the full world view and 15 represents a close-in view at 1/15 of that scale. Minimum value must be equal to or greater than 1 and max value must be greater than the minimum value.";
 
 const defaultZoomIncrementHelpMessageString =
-	"**\"default zoom increment\"** (optional): The zoom increment amount – default: \"1\", can be adjusted in the plugin settings window";
+	"**\"default zoom increment\"** (optional): The default zoom increment amount. Default: \"1\". This can be adjusted in the plugin settings window.";
 
 const defaultZoomLevelHelpMessageString =
-	"**\"default zoom level\"** (optional): The initial zoom level when the map is first loaded – default: \"1\"";
+	"**\"default zoom level\"** (optional): The initial zoom level when the map is first loaded. Default: \"1\"";
 
 const defaultLocationHelpMessageString =
-	"**\"default location\"** (optional): The initial focused coordinates for the map on load \"(latitude, longitude)\" – default: \"(0, 0)\"";
+	"**\"default location\"** (optional): The initial focused coordinates when the map loads, formatted as \"(latitude, longitude)\". Default: \"(0, 0)\"";
 
 const repeatHelpMessageString =
-	"**\"repeat\"** (optional): Indicates if the map should be repeated horizontally, vertically, or in both directions. Use ver/vertical/y, hor/horizontal/x, or both/b – default: \"no-repeat\"";
+	"**\"repeat\"** (optional): Indicates whether the map should repeat horizontally, vertically, or in both directions. Use ver/vertical/y, hor/horizontal/x, or both/b. Default: \"no-repeat\"";
 
 const latitudeRangeHelpMessageString =
-	"**\"latitude range\"** (optional): The latitude bounds as \"(min, max)\" – default: \"(-90, 90)\"";
+	"**\"latitude range\"** (optional): The latitude bounds, formatted as \"(min, max)\". Default: \"(-90, 90)\"";
 
 const longitudeRangeHelpMessageString =
-	"**\"longitude range\"** (optional): The longitude bounds as \"(min, max)\" – default: \"(0, 360)\"";
+	"**\"longitude range\"** (optional): The longitude bounds, formatted as \"(min, max)\". Default: \"(0, 360)\"";
 
 const primeMeridianOffsetHelpMessageString =
-	"**\"prime meridian offset\"** (optional): Offset for latitude and longitude values as \"(latOffset, lngOffset)\" – default: \"(0, 0)\"";
+	"**\"prime meridian offset\"** (optional): The offset applied to latitude and longitude values, formatted as \"(latOffset, lngOffset)\". Default: \"(0, 0)\"";
 
 const helpHelpMessageString =
-	"**\"help, -h, onfo, instruction, -i, or usage\"**: Include one of these keywords to display usage instructions";
+	"**\"help, -h, onfo, instruction, -i, or usage\"**: Include one of these keywords to display usage instructions.";
 
 function allHelpMessages(settings: FantasyMapSettings): string[] {
 	return [
 		mapHelpMessageString,
 		mapIDsHelpMessageString,
-		pinSizeHelpMessageString.replace(
-			'default: "24px"',
-			`default: "${settings.defaultPinSize}"`
-		),
-		defaultZoomIncrementHelpMessageString.replace(
-			'default: "1"',
-			`default: "${settings.defaultZoomIncrement}"`
-		),
+		pinSizeHelpMessageString.replace('default: "24px"', `default: "${settings.defaultPinSize}"`),
+		zoomRangeHelpMessageString,
+		defaultZoomIncrementHelpMessageString.replace('default: "1"', `default: "${settings.defaultZoomIncrement}"`),
 		defaultZoomLevelHelpMessageString,
 		defaultLocationHelpMessageString,
 		repeatHelpMessageString,
@@ -80,6 +79,7 @@ export const fantasyMapCodeBlockCopyToClipboardString = [
 	"map:",
 	"id:",
 	"pin size:",
+	"zoom range:",
 	"default zoom increment:",
 	"default zoom level:",
 	"default location:",
@@ -232,6 +232,13 @@ export function parseFantasyMapParams(
 
 				params.pinSize = value;
 				break;
+				
+			case "zoomrange":
+				if (checkForHelp(zoomRangeHelpMessageString)) break;
+				params.zoomRange = parseCoordsAndRanges(value, [1, 15]);
+				if (params.zoomRange[0] < 1) params.zoomRange[0] = 1;
+				if (params.zoomRange[1] < params.zoomRange[0]) params.zoomRange[1] = params.zoomRange[0];
+				break;
 
 			case "defaultzoomincrement":
 				if (
@@ -254,7 +261,7 @@ export function parseFantasyMapParams(
 
 			case "defaultlocation":
 				if (checkForHelp(defaultLocationHelpMessageString)) break;
-				params.defaultLocation = parseCoords(value, [0, 0]);
+				params.defaultLocation = parseCoordsAndRanges(value, [0, 0]);
 				break;
 
 			case "repeat": {
@@ -278,17 +285,17 @@ export function parseFantasyMapParams(
 
 			case "latituderange":
 				if (checkForHelp(latitudeRangeHelpMessageString)) break;
-				params.latitudeRange = parseCoords(value, [-90, 90]);
+				params.latitudeRange = parseCoordsAndRanges(value, [-90, 90]);
 				break;
 
 			case "longituderange":
 				if (checkForHelp(longitudeRangeHelpMessageString)) break;
-				params.longitudeRange = parseCoords(value, [0, 360]);
+				params.longitudeRange = parseCoordsAndRanges(value, [0, 360]);
 				break;
 
 			case "primemeridianoffset":
 				if (checkForHelp(primeMeridianOffsetHelpMessageString)) break;
-				params.primeMeridianOffset = parseCoords(value, [0, 0]);
+				params.primeMeridianOffset = parseCoordsAndRanges(value, [0, 0]);
 				break;
 
 			default:
@@ -303,18 +310,15 @@ export function parseFantasyMapParams(
 	const finalParams: FantasyMapParams = {
 		map: params.map ?? "",
 		mapIDs: params.mapIDs ?? [],
-		pinSize:
-			params.pinSize && params.pinSize.length > 0
-				? params.pinSize
-				: settings.defaultPinSize,
-		defaultZoomIncrement:
-			params.defaultZoomIncrement ?? settings.defaultZoomIncrement,
+		pinSize: params.pinSize && params.pinSize.length > 0 ? params.pinSize : settings.defaultPinSize,
+		zoomRange: params.zoomRange ?? [1, 15],
+		defaultZoomIncrement: params.defaultZoomIncrement ?? settings.defaultZoomIncrement,
 		defaultZoomLevel: params.defaultZoomLevel ?? 1,
 		defaultLocation: params.defaultLocation ?? [0, 0],
 		repeat: params.repeat ?? "no-repeat",
 		latitudeRange: params.latitudeRange ?? [-90, 90],
 		longitudeRange: params.longitudeRange ?? [0, 360],
-		primeMeridianOffset: params.primeMeridianOffset ?? [0, 0],
+		primeMeridianOffset: params.primeMeridianOffset ?? [0, 0]
 	};
 
 	if (helpMessages.length > 0) {
@@ -331,7 +335,7 @@ export function parseFantasyMapParams(
 	return finalParams;
 }
 
-function parseCoords(
+function parseCoordsAndRanges(
 	coords: string,
 	defaultVal: [number, number]
 ): [number, number] {

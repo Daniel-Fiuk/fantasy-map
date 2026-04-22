@@ -139,8 +139,8 @@ class MapInteractionManager implements MapInteractionController {
 			zoom: this.parameters.defaultZoomLevel || 1,
 			offsetX: 0,
 			offsetY: 0,
-			minZoom: 1,
-			maxZoom: 15,
+			minZoom: this.parameters.zoomRange[0] || 1,
+			maxZoom: this.parameters.zoomRange[1] || 15,
 		};
 	}
 
@@ -261,9 +261,45 @@ class MapInteractionManager implements MapInteractionController {
 	}
 
 	private reset(): void {
+		// for debugging
+		const initOffsets = {
+			x: this.state.offsetX,
+			y: this.state.offsetY,
+		}
+		
+		// set default zoom level
 		this.state.zoom = this.parameters.defaultZoomLevel || 1;
-		this.state.offsetX = 0;
-		this.state.offsetY = 0;
+		
+		// get wrapper window size
+		const rect = this.wrapper.getBoundingClientRect();
+		
+		// get height amd width of window
+		const viewW = rect.width;
+		const viewH = rect.height;
+		
+		// map scales based on view size
+		const worldW = viewW * this.state.zoom;
+		const worldH = viewH * this.state.zoom;
+		
+		// gat min, max, and range of latitude and longitude
+		const latMin = this.parameters.latitudeRange[0] ?? -90;
+		const latMax = this.parameters.latitudeRange[1] ?? 90;
+		const latRng = latMax - latMin;
+		
+		const lngMin = this.parameters.longitudeRange[0] ?? 0;
+		const lngMax = this.parameters.longitudeRange[1] ?? 360;
+		const lngRng = lngMax - lngMin;
+		
+		// find default position for map element
+		const defaultLeft = (this.parameters.defaultLocation[1] - this.parameters.primeMeridianOffset[1] - lngMin) / lngRng * worldW + (viewW / 2);
+		const defaulyTop = (this.parameters.defaultLocation[0] - this.parameters.primeMeridianOffset[0] - latMin) / latRng * worldH + (viewH / 2);
+
+		this.state.offsetX = defaultLeft;
+		this.state.offsetY = defaulyTop;
+		
+		console.log(initOffsets, {x: this.state.offsetX, y: this.state.offsetY});
+		
+		this.clampOffsets();
 		this.applyTransform();
 	}
 
@@ -292,7 +328,7 @@ class MapInteractionManager implements MapInteractionController {
 	private zoomAtViewportCenter(zoomFactor: number): void {
 		const rect = this.wrapper.getBoundingClientRect();
 		const cx = rect.left + rect.width / 2;
-		const cy = rect.top + (rect.height - this.toolbar.clientHeight) / 2;
+		const cy = rect.top + rect.height / 2;
 		this.zoomAt(cx, cy, zoomFactor);
 	}
 }
