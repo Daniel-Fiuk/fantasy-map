@@ -139,7 +139,7 @@ class PinInteractionManager implements PinInteractionController {
 			await this.app.fileManager.processFrontMatter(
 				selectedPin.note,
 				(frontmatter: FrontMatterCache) => {
-					frontmatter["fm-location"] = this.formatLocation(selectedPin.location) as string;
+					frontmatter["fm-location"] = this.formatLocation(selectedPin.location);
 				}
 			);
 		} else {
