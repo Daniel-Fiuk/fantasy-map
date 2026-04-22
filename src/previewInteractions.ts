@@ -113,11 +113,11 @@ function wirePreviewLinks(
 
 		if (!linktext) return;
 
-		link.onclick = (e: MouseEvent) => {
+		link.onclick = async (e: MouseEvent) => {
 			e.preventDefault();
 			e.stopPropagation();
 
-			app.workspace.openLinkText(linktext, sourcePath, e.ctrlKey || e.metaKey);
+			await app.workspace.openLinkText(linktext, sourcePath, e.ctrlKey || e.metaKey);
 		};
 	});
 

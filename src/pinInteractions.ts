@@ -113,7 +113,11 @@ class PinInteractionManager implements PinInteractionController {
 		});
 	};
 
-	private readonly onWrapperPointerUp = async (e: PointerEvent) => {
+	private readonly onWrapperPointerUp = (e: PointerEvent): void => {
+		void this.handleWrapperPointerUp(e);
+	};
+
+	private async handleWrapperPointerUp(e: PointerEvent): Promise<void> {
 		if (!this.selectedPin) return;
 
 		const selectedPin = this.selectedPin;
@@ -133,21 +137,22 @@ class PinInteractionManager implements PinInteractionController {
 			selectedPin.location = this.pxToLocation(px);
 
 			await this.app.fileManager.processFrontMatter(
-				selectedPin.note, (frontmatter: FrontMatterCache) => {
-					frontmatter["fm-location"] = this.formatLocation(selectedPin.location) as string;
+				selectedPin.note,
+				(frontmatter) => {
+					frontmatter["fm-location"] = this.formatLocation(selectedPin.location);
 				}
 			);
 		} else {
 			this.suppressPreview(200);
 			destroyCustomPreview();
-			await this.app.workspace.openLinkText(selectedPin.note.path, "", false);  
+			await this.app.workspace.openLinkText(selectedPin.note.path, "", false);
 		}
 
 		this.setMapPanningEnabled(true);
 		this.selectedPin = null;
 		this.pinDragging = false;
 		this.pointerStartPos = null;
-	};
+	}
 
 	private readonly onWrapperPointerLeave = () => {
 		if (!this.pinDragging) return;
@@ -264,7 +269,7 @@ class PinInteractionManager implements PinInteractionController {
 
 		const mapIDs = this.parameters.mapIDs ?? [];
 		if (mapIDs.length > 0 && mapIDs[0] !== "") {
-			const mapId: unknown = frontMatter["fm-id"];
+			const mapId: string = frontMatter["fm-id"];
 			if (mapId == null || !mapIDs.includes(String(mapId))) return;
 		}
 
@@ -297,12 +302,13 @@ class PinInteractionManager implements PinInteractionController {
 			this.ctx.sourcePath
 		);
 
+		const parser = new DOMParser();
+		
 		if (pinFile) {
 			if (pinFile.extension.toLowerCase() === "svg") {
-				pinIconEl.innerHTML = this.addSvgViewBoxPadding(
-					await this.app.vault.cachedRead(pinFile),
-					2
-				);
+				const customPinIcon = this.addSvgViewBoxPadding(await this.app.vault.cachedRead(pinFile), 2);
+				const customSVGDoc = parser.parseFromString(customPinIcon, "image/svg+xml");
+				pinIconEl.replaceChildren(customSVGDoc.getElementsByTagName("svg"))
 			} else {
 				const url = this.app.vault.getResourcePath(pinFile);
 				pinIconEl.createEl("img", {
@@ -313,7 +319,9 @@ class PinInteractionManager implements PinInteractionController {
 				});
 			}
 		} else {
-			pinIconEl.innerHTML = this.addSvgViewBoxPadding(defaultPinIcon, 2);
+			const defaultPaddedSVG = this.addSvgViewBoxPadding(defaultPinIcon, 2);
+			const defaultSVGDoc = parser.parseFromString(defaultPaddedSVG, "image/svg+xml");
+			pinIconEl.replaceChildren(defaultSVGDoc.documentElement);
 		}
 
 		const match = this.parameters.pinSize.trim().match(

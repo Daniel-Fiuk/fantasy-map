@@ -83,7 +83,7 @@ export class FantasyMapSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName("Template code block")
 			.setDesc(
-				"Copy this into a note to start a Fantasy-Map block. Use 'help' or '-h' to get helpful messages and usage instructions."
+				"Copy this into a note to start a fantasy map block. Use 'help' or '-h' to get helpful messages and usage instructions."
 			)
 			.addTextArea((text) => {
 				text.setValue(fantasyMapCodeBlockCopyToClipboardString);
@@ -126,10 +126,10 @@ export class FantasyMapSettingTab extends PluginSettingTab {
 						await navigator.clipboard.writeText(
 							fantasyMapFrontMatterCopyToClipboardString
 						);
-						new Notice("Fantasy-Map front matter copied");
+						new Notice("Fantasy map front matter copied.");
 					} catch (e) {
 						console.error(e);
-						new Notice("Failed to copy block");
+						new Notice("Failed to copy block.");
 					}
 				});
 			});
