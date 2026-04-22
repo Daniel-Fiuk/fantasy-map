@@ -261,12 +261,6 @@ class MapInteractionManager implements MapInteractionController {
 	}
 
 	private reset(): void {
-		// for debugging
-		const initOffsets = {
-			x: this.state.offsetX,
-			y: this.state.offsetY,
-		}
-		
 		// set default zoom level
 		this.state.zoom = this.parameters.defaultZoomLevel || 1;
 		
@@ -296,8 +290,6 @@ class MapInteractionManager implements MapInteractionController {
 
 		this.state.offsetX = defaultLeft;
 		this.state.offsetY = defaulyTop;
-		
-		console.log(initOffsets, {x: this.state.offsetX, y: this.state.offsetY});
 		
 		this.clampOffsets();
 		this.applyTransform();

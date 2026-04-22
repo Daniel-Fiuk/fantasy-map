@@ -1,7 +1,7 @@
 {
 	"id": "fantasy-map",
 	"name": "Fantasy Map",
-	"version": "1.0.1",
+	"version": "1.0.0",
 	"minAppVersion": "1.12.0",
 	"description": "Create and document your fantasy world with a map plugin for Obsidian. Upload your own PNG or SVG maps. Plant pins in important locations and linking them to your notes. A great way to keep track of your world building and storytelling.",
 	"author": "Daniel Fiuk",
