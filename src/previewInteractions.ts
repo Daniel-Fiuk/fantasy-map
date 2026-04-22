@@ -36,7 +36,7 @@ export async function showCustomPreview(
 	titleLink.onclick = (e) => {
 		e.preventDefault();
 		e.stopPropagation();
-		app.workspace.openLinkText(pin.note.path, pin.note.path, e.ctrlKey || e.metaKey);
+		await app.workspace.openLinkText(pin.note.path, pin.note.path, e.ctrlKey || e.metaKey);
 	};
 
 	const contentEl = container.createDiv({ cls: "fm-hover-content" });

@@ -100,7 +100,7 @@ export class FantasyMapSettingTab extends PluginSettingTab {
 						await navigator.clipboard.writeText(
 							fantasyMapCodeBlockCopyToClipboardString
 						);
-						new Notice("Fantasy-Map block copied");
+						new Notice("Fantasy map block copied");
 					} catch (e) {
 						console.error(e);
 						new Notice("Failed to copy block");

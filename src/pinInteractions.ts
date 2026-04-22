@@ -269,7 +269,7 @@ class PinInteractionManager implements PinInteractionController {
 
 		const mapIDs = this.parameters.mapIDs ?? [];
 		if (mapIDs.length > 0 && mapIDs[0] !== "") {
-			const mapId: string = frontMatter["fm-id"];
+			const mapId = frontMatter["fm-id"] as string;
 			if (mapId == null || !mapIDs.includes(String(mapId))) return;
 		}
 
@@ -295,7 +295,7 @@ class PinInteractionManager implements PinInteractionController {
 
 		const pinIconEl = pinElement.createEl("div", { cls: "map-pin-icon" });
 
-		const pinIconValue: unknown = frontMatter["fm-pin-icon"];
+		const pinIconValue: unknown = frontMatter["fm-pin-icon"] as string;
 		const pinFile = this.resolvePinIconFile(
 			this.app,
 			pinIconValue,
