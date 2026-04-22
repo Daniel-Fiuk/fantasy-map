@@ -308,7 +308,7 @@ class PinInteractionManager implements PinInteractionController {
 			if (pinFile.extension.toLowerCase() === "svg") {
 				const customPinIcon = this.addSvgViewBoxPadding(await this.app.vault.cachedRead(pinFile), 2);
 				const customSVGDoc = parser.parseFromString(customPinIcon, "image/svg+xml");
-				pinIconEl.replaceChildren(customSVGDoc.getElementsByTagName("svg"))
+				pinIconEl.replaceChildren(customSVGDoc.documentElement);
 			} else {
 				const url = this.app.vault.getResourcePath(pinFile);
 				pinIconEl.createEl("img", {
