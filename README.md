@@ -35,6 +35,10 @@ default zoom level: 2
 default location: (0, 316)
 ```
 ````
+<div align="center" style="display:flex;flex-wrap:wrap;justify-content:center;gap:12px;">
+  <img src="READMEAssets/Pan And Zoom.gif" alt="Pan and zoom demo" style="width:100%;max-width:320px;height:auto;flex:1 1 300px;">
+</div>
+
 ## Infinite wrapping maps
 You can set up a repeating map by simply defining a **repeat** parameter for horizontal, vertical, or even both axes wrapping.
 ### fantasy-map code block
@@ -44,6 +48,12 @@ map: world map.svg
 repeat: x
 ```
 ````
+<div align="center" style="display:flex;flex-wrap:wrap;justify-content:center;gap:12px;">
+  <img src="READMEAssets/Horizontal Scroll.gif" alt="Horizontal scroll demo" style="width:100%;max-width:320px;height:auto;flex:1 1 300px;">
+  <img src="READMEAssets/Vertical Scroll.gif" alt="Vertical scroll demo" style="width:100%;max-width:320px;height:auto;flex:1 1 300px;">
+  <img src="READMEAssets/Both Scroll.gif" alt="Both scroll demo" style="width:100%;max-width:320px;height:auto;flex:1 1 300px;">
+</div>
+
 ## Coordinate Customization
 By default the map assumes a default latitude and longitude for your map. (-90, 90) latitude and (0, 360) longitude. This scales with the aspect ratio of your map by default so that a coordinate of (90, 0) would correspond to the very top left corner of your map, and (-90, 360) would map to the very bottom right. You can customize your coordinate space by defining the latitude and longitude ranges, as well as define a custom prime meridian for your worlds.
 ### fantasy-map code block
@@ -96,3 +106,8 @@ map: world map.svg
 pin size: 24px
 ```
 ````
+## Preview Notes
+You can preview your notes directly from your map with images and functioning links.
+<div align="center" style="display:flex;flex-wrap:wrap;justify-content:center;gap:12px;">
+  <img src="READMEAssets/Previews.gif" alt="Previews demo" style="width:100%;max-width:320px;height:auto;flex:1 1 300px;">
+</div>
