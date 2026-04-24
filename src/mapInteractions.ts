@@ -23,7 +23,6 @@ interface MapInteractionOptions {
 	toolbar: HTMLElement;
 	parameters: FantasyMapParams;
 	settings: FantasyMapSettings;
-	settings: FantasyMapSettings;
 	onViewportChanged: (
 		offsetX: number,
 		offsetY: number,
