@@ -1,5 +1,6 @@
-/* region map layout */
+/*#region Containers and Wrappers*/
 
+/* Used to contain the maps window in the note. */
 .fantasy-map-container {
 	position: relative;
 	width: 100%;
@@ -7,6 +8,7 @@
 	border-radius: 4px;
 }
 
+/* Used to contain the maps elements. */
 .fantasy-map-wrapper {
 	position: relative;
 	width: 100%;
@@ -14,6 +16,9 @@
 	overflow: hidden;
 }
 
+/*#region Tiles and Backgrounds*/
+
+/* Used for covering seams between tiles. */
 .fantasy-map-background {
 	position: absolute;
 	inset: 0;
@@ -25,6 +30,7 @@
 	z-index: 0;
 }
 
+/* Used to contain tile elements. */
 .fantasy-map-tiles {
 	position: absolute;
 	inset: 0;
@@ -32,6 +38,7 @@
 	z-index: 1;
 }
 
+/* Used to desplay map images with the highest possible quality. */
 .fm-tile {
 	position: absolute;
 	width: 100%;
@@ -41,6 +48,9 @@
 	background-size: 100% 100%;
 }
 
+/*#endregion*/
+
+/* Prevents users from selecting tile images while dragging, while setting the cursor's grab state. */
 .fantasy-map-container,
 .fantasy-map-background,
 .fantasy-map-tiles,
@@ -58,6 +68,7 @@
 	cursor: grab;
 }
 
+/* While active, sets cursor state to grabbing. */
 .fantasy-map-container:active,
 .fantasy-map-background:active,
 .fantasy-map-tiles:active,
@@ -65,10 +76,11 @@
 	cursor: grabbing;
 }
 
-/* endregion */
+/*#endregion*/
 
-/* region toolbar */
+/*#region Toolbar*/
 
+/* Defines the toolbar style while setting it's opacity to zero when not being interacted with. */
 .fantasy-map-toolbar {
 	position: absolute;
 	bottom: 5px;
@@ -89,25 +101,29 @@
 	transition: opacity 150ms ease;
 }
 
+/* Sets the toolbar's opacity to 1 when user interacts with the map. */
 .fantasy-map-container:hover .fantasy-map-toolbar,
 .fantasy-map-container:focus-within .fantasy-map-toolbar {
 	opacity: 1;
 }
 
+/* Sets the style for toolbar buttons. */
 .fantasy-map-toolbar button {
 	padding: 0.1rem 0.4rem;
 	font-size: 0.9rem;
 }
 
+/* Sets the style for zoom step text field on the toolbar. */
 .fantasy-map-toolbar input.fm-zoom-step {
 	width: 4rem;
 	font-size: 0.9rem;
 }
 
-/* endregion */
+/*#endregion*/
 
-/* region pins */
+/*#region Pins*/
 
+/* Used to contain pin elements. */
 .map-pin {
 	position: absolute;
 	width: fit-content;
@@ -116,12 +132,14 @@
 	z-index: 5;
 }
 
+/* Sets the style of pin icon container. */
 .map-pin-icon {
 	position: relative;
 	width: 24px;
 	height: auto;
 }
 
+/* Sets the styles of the pin icon images. */
 .map-pin-icon svg,
 .map-pin-icon img {
 	display: block;
@@ -134,28 +152,33 @@
 	transition: transform 120ms ease, filter 120ms ease;
 }
 
+/* Sets the fill color of svg pins to match the Obsidian text accent color. */
 .map-pin-icon svg {
 	fill: var(--text-accent);
 }
 
+/* Sets cursor to pointer on hover. */
 .map-pin-icon:hover {
 	cursor: pointer;
 }
 
+/* Animates the pin icon images on pin hover. */
 .map-pin-icon:hover svg,
 .map-pin-icon:hover img {
 	transform: translateX(-50%) translateY(-10%) scale(1.1);
 	filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.5));
 }
 
+/* On pin hover, set pin icon color to text accent hover. */
 .map-pin-icon:hover svg {
 	fill: var(--text-accent-hover);
 }
 
-/* endregion */
+/*#endregion*/
 
-/* region page previews */
+/*#region Note Previews*/
 
+/* Sets the hover container's style. */
 .fantasy-map-hover-preview {
 	position: fixed;
 	width: min(520px, calc(100vw - 24px));
@@ -175,12 +198,14 @@
 	overflow: hidden;
 }
 
+/* Sets when the preview is visable. */
 .fantasy-map-hover-preview.is-visible {
 	opacity: 1;
 	pointer-events: auto;
 	transform: translateY(0);
 }
 
+/* Sets the header element style. */
 .fm-hover-header {
 	display: flex;
 	align-items: center;
@@ -189,6 +214,7 @@
 	gap: 8px;
 }
 
+/* Sets the header title text style. */
 .fantasy-map-hover-preview .fm-hover-title {
 	display: inline-block;
 	margin: 0;
@@ -197,20 +223,12 @@
 	text-decoration: none;
 }
 
+/* Sets preview internal link styles. */
 .fantasy-map-hover-preview a.internal-link {
 	text-decoration: underline;
 }
 
-.fm-hover-open {
-	font-size: 0.85rem;
-	cursor: pointer;
-	opacity: 0.7;
-}
-
-.fm-hover-open:hover {
-	opacity: 1;
-}
-
+/* Sets the style of preview content. */
 .fm-hover-content {
 	max-height: 260px;
 	overflow-y: auto;
@@ -219,6 +237,7 @@
 	padding-right: 4px;
 }
 
+/* Sets the style of image, video, and embeded content. */
 .fantasy-map-hover-preview .fm-hover-content img,
 .fantasy-map-hover-preview .fm-hover-content svg,
 .fantasy-map-hover-preview .fm-hover-content video,
@@ -234,8 +253,9 @@
 	overflow: hidden;
 }
 
+/* Sets text overflow for preview content. */
 .fantasy-map-hover-preview .fm-hover-content p {
 	overflow-wrap: anywhere;
 }
 
-/* endregion */
+/*#endregion*/

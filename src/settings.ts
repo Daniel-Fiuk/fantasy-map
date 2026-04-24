@@ -6,11 +6,13 @@ import {
 	isValidPinSize,
 } from "./paramaters";
 
+// Define the settings interface for the fantasy map plugin
 export interface FantasyMapSettings {
 	defaultPinSize: string;
 	defaultZoomIncrement: number;
 }
 
+// Set the default settings for the fantasy map plugin
 export const DEFAULT_SETTINGS: FantasyMapSettings = {
 	defaultPinSize: "24px",
 	defaultZoomIncrement: 1,
@@ -19,15 +21,17 @@ export const DEFAULT_SETTINGS: FantasyMapSettings = {
 export class FantasyMapSettingTab extends PluginSettingTab {
 	plugin: FantasyMap;
 
+	// Initialize the settings tab with a reference to the main plugin instance
 	constructor(app: App, plugin: FantasyMap) {
 		super(app, plugin);
 		this.plugin = plugin;
 	}
-
+	
 	display(): void {
 		const { containerEl } = this;
 		containerEl.empty();
-
+		
+		// Create a setting for the default pin size with validation
 		new Setting(containerEl)
 			.setName("Default pin size")
 			.setDesc(
@@ -57,6 +61,7 @@ export class FantasyMapSettingTab extends PluginSettingTab {
 					});
 			});
 
+		// Create a setting for the default zoom increment with validation
 		new Setting(containerEl)
 			.setName("Default zoom increment")
 			.setDesc(
@@ -80,6 +85,7 @@ export class FantasyMapSettingTab extends PluginSettingTab {
 					});
 			});
 
+		// Create a setting that provides a template code block for users to copy, with a button to copy it to the clipboard
 		new Setting(containerEl)
 			.setName("Template code block")
 			.setDesc(
@@ -108,6 +114,7 @@ export class FantasyMapSettingTab extends PluginSettingTab {
 				});
 			});
 
+		// Create a setting that provides template note front matter for users to copy, with a button to copy it to the clipboard
 		new Setting(containerEl)
 			.setName("Template note front matter")
 			.setDesc("Copy this into a note to pin a note to your map.")

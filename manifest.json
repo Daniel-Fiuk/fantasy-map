@@ -2,9 +2,10 @@
 	"id": "fantasy-map",
 	"name": "Fantasy Map",
 	"version": "1.0.0",
-	"minAppVersion": "1.12.0",
-	"description": "Create and document your fantasy world with interactive maps. Upload your own maps and plant pins in important locations, each linking back to your notes. It's a great way to keep track of your world building and storytelling.",
+	"minAppVersion": "1.12.7",
+	"description": "Upload your own maps and plant pins on important locations, each linking back to your notes.",
 	"author": "Daniel Fiuk",
 	"authorUrl": "https://danielfiuk.ca",
-	"isDesktopOnly": false
+	"isDesktopOnly": true,
+	"repo": "Daniel-Fiuk/fantasy-map",
 }

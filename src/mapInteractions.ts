@@ -2,6 +2,7 @@ import type { App } from "obsidian";
 import type { FantasyMapParams } from "./paramaters";
 import type { FantasyMapSettings } from "./settings";
 
+// Manages panning and zooming interactions for the fantasy map
 export interface PanZoomState {
 	zoom: number;
 	offsetX: number;
@@ -10,12 +11,14 @@ export interface PanZoomState {
 	maxZoom: number;
 }
 
+// Interface for the map interaction controller, defining methods for initialization, enabling/disabling panning, and cleanup
 export interface MapInteractionController {
 	init(): void;
 	setPanningEnabled(enabled: boolean): void;
 	destroy(): void;
 }
 
+// Options for creating the map interaction controller, including references to DOM elements, map parameters, settings, and callback functions for viewport changes and interaction start
 interface MapInteractionOptions {
 	wrapper: HTMLElement;
 	bgLayer: HTMLElement;
@@ -32,12 +35,14 @@ interface MapInteractionOptions {
 	onInteractionStart?: () => void;
 }
 
+// Factory function to create a new instance of the MapInteractionController with the provided options
 export function createMapInteractionController(
 	options: MapInteractionOptions
 ): MapInteractionController {
 	return new MapInteractionManager(options);
 }
 
+// Implementation of the MapInteractionController interface, managing panning and zooming interactions for the fantasy map
 class MapInteractionManager implements MapInteractionController {
 	private readonly wrapper: HTMLElement;
 	private readonly bgLayer: HTMLElement;
@@ -54,6 +59,7 @@ class MapInteractionManager implements MapInteractionController {
 	private lastX = 0;
 	private lastY = 0;
 
+	// Handle pointer down events to start panning, ensuring that interactions with the toolbar do not trigger panning
 	private readonly onPointerDown = (e: PointerEvent) => {
 		if (!this.panningEnabled) return;
 		if (this.toolbar.contains(e.target as Node)) return;
@@ -66,7 +72,8 @@ class MapInteractionManager implements MapInteractionController {
 
 		this.wrapper.setPointerCapture(e.pointerId);
 	};
-
+	
+	// Handle pointer move events to update the map's offset based on the movement, applying clamping and updating the transform
 	private readonly onPointerMove = (e: PointerEvent) => {
 		if (!this.isPanning || !this.panningEnabled) return;
 
@@ -83,10 +90,12 @@ class MapInteractionManager implements MapInteractionController {
 		this.applyTransform();
 	};
 
+	// Handle pointer up events to stop panning
 	private readonly onPointerUp = () => {
 		this.isPanning = false;
 	};
 
+	// Handle wheel events to perform zooming, calculating the zoom factor based on the wheel delta and applying the zoom at the cursor position
 	private readonly onWheel = (e: WheelEvent) => {
 		e.preventDefault();
 
@@ -100,6 +109,7 @@ class MapInteractionManager implements MapInteractionController {
 		this.zoomAt(e.clientX, e.clientY, factor);
 	};
 
+	// Handle zoom in button clicks to zoom in at the viewport center, calculating the zoom factor based on the step input or default settings
 	private readonly onZoomInClick = () => {
 		const stepInput = this.toolbar.querySelector<HTMLInputElement>(".fm-zoom-step");
 		const stepValue = Number(stepInput?.value);
@@ -111,6 +121,7 @@ class MapInteractionManager implements MapInteractionController {
 		this.zoomAtViewportCenter(factorBase);
 	};
 
+	// Handle zoom out button clicks to zoom out at the viewport center, calculating the zoom factor based on the step input or default settings
 	private readonly onZoomOutClick = () => {
 		const stepInput = this.toolbar.querySelector<HTMLInputElement>(".fm-zoom-step");
 		const stepValue = Number(stepInput?.value);
@@ -122,10 +133,12 @@ class MapInteractionManager implements MapInteractionController {
 		this.zoomAtViewportCenter(1 / factorBase);
 	};
 
+	// Handle reset button clicks to reset the map view to the default position and zoom level
 	private readonly onResetClick = () => {
 		this.reset();
 	};
 
+	// Constructor to initialize the MapInteractionManager with the provided options, setting up references to DOM elements, map parameters, settings, and callback functions, and initializing the pan and zoom state
 	constructor(options: MapInteractionOptions) {
 		this.wrapper = options.wrapper;
 		this.bgLayer = options.bgLayer;
@@ -145,6 +158,7 @@ class MapInteractionManager implements MapInteractionController {
 		};
 	}
 
+	// Initialize the map interactions by adding event listeners for pointer and wheel events, as well as button clicks for zooming and resetting, and setting the initial map view
 	init(): void {
 		this.wrapper.addEventListener("pointerdown", this.onPointerDown);
 		this.wrapper.addEventListener("pointermove", this.onPointerMove);
@@ -158,6 +172,7 @@ class MapInteractionManager implements MapInteractionController {
 		this.reset();
 	}
 
+	// Enable or disable panning interactions, ensuring that if panning is disabled while currently panning, it will stop panning immediately
 	setPanningEnabled(enabled: boolean): void {
 		this.panningEnabled = enabled;
 		if (!enabled) {
@@ -165,6 +180,7 @@ class MapInteractionManager implements MapInteractionController {
 		}
 	}
 
+	// Clean up event listeners and reset the panning state when the map interactions are destroyed
 	destroy(): void {
 		this.isPanning = false;
 
@@ -178,6 +194,7 @@ class MapInteractionManager implements MapInteractionController {
 		this.resetBtn?.removeEventListener("click", this.onResetClick);
 	}
 
+	// Getters for the zoom in, zoom out, and reset buttons in the toolbar, returning the corresponding HTML button elements or null if they are not found
 	private get zoomInBtn(): HTMLButtonElement | null {
 		return this.toolbar.querySelector(".fm-zoom-in");
 	}
@@ -190,6 +207,7 @@ class MapInteractionManager implements MapInteractionController {
 		return this.toolbar.querySelector(".fm-reset");
 	}
 
+	// Apply the current pan and zoom state to the map layers by calculating the appropriate CSS transforms and background styles based on the current offsets and zoom level, and invoking the viewport change callback with the updated parameters
 	private applyTransform(): void {
 		const tileWidth = this.wrapper.clientWidth * this.state.zoom;
 		const tileHeight = this.wrapper.clientHeight * this.state.zoom;
@@ -215,7 +233,10 @@ class MapInteractionManager implements MapInteractionController {
 		);
 	}
 
+	// Clamp the pan offsets to prevent panning beyond the edges of the map, taking into account the current zoom level and the repeat settings for the background
 	private clampOffsets(): void {
+		
+		// Get the size of the wrapper element to calculate the visible area of the map
 		const rect = this.wrapper.getBoundingClientRect();
 		const viewW = rect.width;
 		const viewH = rect.height;
@@ -223,6 +244,7 @@ class MapInteractionManager implements MapInteractionController {
 		const worldW = viewW * this.state.zoom;
 		const worldH = viewH * this.state.zoom;
 
+		// Determine the repeat settings for the background, defaulting to "no-repeat" if not specified
 		const repeat = this.parameters.repeat ?? "no-repeat";
 
 		let minX = -(worldW - viewW);
@@ -252,6 +274,7 @@ class MapInteractionManager implements MapInteractionController {
 				break;
 		}
 
+		// Clamp offsets if they are finite, allowing for infinite values when repeat is enabled
 		if (Number.isFinite(minX)) {
 			this.state.offsetX = Math.max(minX, Math.min(maxX, this.state.offsetX));
 		}
@@ -261,6 +284,7 @@ class MapInteractionManager implements MapInteractionController {
 		}
 	}
 
+	// Reset the map view to the default position and zoom level based on the provided parameters, calculating the appropriate offsets to center the map on the default location
 	private reset(): void {
 		// set default zoom level
 		this.state.zoom = this.parameters.defaultZoomLevel || 1;
@@ -299,6 +323,7 @@ class MapInteractionManager implements MapInteractionController {
 		this.applyTransform();
 	}
 
+	// Zoom the map at a specific client (screen) coordinate by a given zoom factor, calculating the new zoom level and adjusting the offsets to keep the zoom centered on the specified point
 	private zoomAt(clientX: number, clientY: number, factor: number): void {
 		const rect = this.wrapper.getBoundingClientRect();
 
@@ -321,6 +346,7 @@ class MapInteractionManager implements MapInteractionController {
 		this.applyTransform();
 	}
 
+	// Zoom the map at the center of the viewport by a given zoom factor, calculating the center point of the wrapper element and invoking the zoomAt method with those coordinates
 	private zoomAtViewportCenter(zoomFactor: number): void {
 		const rect = this.wrapper.getBoundingClientRect();
 		const cx = rect.left + rect.width / 2;

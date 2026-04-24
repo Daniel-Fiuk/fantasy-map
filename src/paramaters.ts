@@ -8,6 +8,7 @@ import {
 
 import { FantasyMapSettings } from "./settings";
 
+// Interface defining the parameters for the fantasy map
 export interface FantasyMapParams {
 	map: string;
 	mapIDs: string[];
@@ -21,6 +22,9 @@ export interface FantasyMapParams {
 	longitudeRange: [number, number];
 	primeMeridianOffset: [number, number];
 }
+
+// Help message strings for each parameter
+//#region Help Messages
 
 const mapHelpMessageString =
 	"**\"map\"** (**required**): The name of the map asset to display. Supports relative paths, absolute paths, and bare filenames (e.g. \"World Map.svg\"). The file must be located somewhere in your vault. Supported file types are SVG, PNG, JPG, JPEG, WEBP, and GIF.";
@@ -58,6 +62,7 @@ const primeMeridianOffsetHelpMessageString =
 const helpHelpMessageString =
 	"**\"help, -h, onfo, instruction, -i, or usage\"**: Include one of these keywords to display usage instructions.";
 
+// Function to compile all help messages into an array
 function allHelpMessages(settings: FantasyMapSettings): string[] {
 	return [
 		mapHelpMessageString,
@@ -74,6 +79,11 @@ function allHelpMessages(settings: FantasyMapSettings): string[] {
 		helpHelpMessageString,
 	];
 }
+
+//#endregion
+
+// Template string for users to copy when they want to create a new fantasy map code block or note frontmatter
+//#region Copy Blocks
 
 export const fantasyMapCodeBlockCopyToClipboardString = [
 	"```fantasy-map",
@@ -99,6 +109,11 @@ export const fantasyMapFrontMatterCopyToClipboardString = [
 	"---",
 ].join("\n");
 
+//#endregions
+
+// Arrays of keywords for parsing parameters and help requests
+//#region Keywords
+
 const affirmatives = [
 	"yes",
 	"y",
@@ -121,12 +136,41 @@ const affirmatives = [
 	"confirmed",
 ];
 
-const verticalRepeatAffirmatives = ["vertical", "vert", "ver", "vr", "v", "y"];
-const horizontalRepeatAffirmatives = ["horizontal", "hori", "hor", "hr", "h", "x"];
-const bothRepeatAffirmatives = ["both", "b"];
+const verticalRepeatAffirmatives = [
+	"vertical", 
+	"vert", 
+	"ver", 
+	"vr", 
+	"v", 
+	"y"
+];
 
-const helpKeywords = ["help", "-h", "info", "instruction", "-i", "usage"];
+const horizontalRepeatAffirmatives = [
+	"horizontal", 
+	"hori", 
+	"hor", 
+	"hr", 
+	"h", 
+	"x"
+];
 
+const bothRepeatAffirmatives = [
+	"both", 
+	"b"
+];
+
+const helpKeywords = [
+	"help", 
+	"-h", 
+	"info", 
+	"instruction", 
+	"-i", 
+	"usage"
+];
+
+//#endregion
+
+// Main function to parse the fantasy map parameters from the source string
 export function parseFantasyMapParams(
 	app: App,
 	source: string,
@@ -135,20 +179,25 @@ export function parseFantasyMapParams(
 	component: Component,
 	settings: FantasyMapSettings
 ): FantasyMapParams {
+	
+	// Split the source into lines, trim whitespace, and filter out empty lines
 	const lines = source
 		.split("\n")
 		.map((l) => l.trim())
 		.filter(Boolean);
 
+	// Object to hold the parsed parameters, initialized as empty
 	const params: Partial<FantasyMapParams> = {};
 	const helpMessages: string[] = [];
 
+	// Helper function to add a help message to the list if it's not already included
 	const addHelpMessage = (message: string) => {
 		if (!helpMessages.includes(message)) {
 			helpMessages.push(message);
 		}
 	};
 
+	// If no lines are provided, show all help messages
 	if (lines.length === 0) {
 		void fantasyMapHelpMessage(
 			app,
@@ -163,12 +212,16 @@ export function parseFantasyMapParams(
 		);
 	}
 
+	// Process each line to extract parameters or detect help requests
 	for (const line of lines) {
+		
+		// Check if the line is a help request and show all help messages if it is
 		if (helpKeywords.includes(line.toLowerCase())) {
 			allHelpMessages(settings).forEach(addHelpMessage);
 			continue;
 		}
 
+		// Validate that the line contains a colon to separate key and value
 		if (!line.includes(":")) {
 			addHelpMessage(
 				`Fantasy Map Error: Invalid parameter format: "${line}"! Each parameter should be in the format "key: value".`
@@ -176,24 +229,31 @@ export function parseFantasyMapParams(
 			continue;
 		}
 
+		// Split the line into key and value parts, trimming whitespace and normalizing the key
 		const [rawKey, ...rawValue] = line.split(":");
 		if (!rawKey || rawValue.length === 0) continue;
 
+		// Normalize the key by trimming whitespace, removing internal spaces, and converting to lowercase
 		const key = rawKey.trim().replace(/\s+/g, "").toLowerCase();
 		const value = rawValue.join(":").trim();
 
+		// Helper function to check if a help message should be shown for a specific parameter based on the value
 		const checkForHelp = (message: string): boolean => {
 			const helpRequested = helpKeywords.includes(value.toLowerCase());
 			if (helpRequested) addHelpMessage(message);
 			return helpRequested;
 		};
 
+		// If the key is a help keyword, show all help messages and skip further processing for this line
 		if (helpKeywords.includes(key)) {
 			allHelpMessages(settings).forEach(addHelpMessage);
 			continue;
 		}
 
+		// Process the parameter based on the normalized key
 		switch (key) {
+			
+			// For the "map" parameter, check for help and validate that a value is provided
 			case "map":
 				if (checkForHelp(mapHelpMessageString)) break;
 				if (value.length === 0) {
@@ -201,7 +261,8 @@ export function parseFantasyMapParams(
 				}
 				params.map = value;
 				break;
-
+				
+			// For the "id" parameter, check for help and parse the comma-separated list of IDs into an array
 			case "id":
 				if (checkForHelp(mapIDsHelpMessageString)) break;
 				params.mapIDs = value
@@ -210,6 +271,7 @@ export function parseFantasyMapParams(
 					.filter(Boolean);
 				break;
 
+			// For the "pin size" parameter, check for help and validate that the value is a valid CSS size before assigning it to the parameters
 			case "pinsize":
 				if (
 					checkForHelp(
@@ -218,9 +280,7 @@ export function parseFantasyMapParams(
 							`default: "${settings.defaultPinSize}"`
 						)
 					)
-				) {
-					break;
-				}
+				) break;
 
 				if (value.length === 0) break;
 
@@ -234,6 +294,7 @@ export function parseFantasyMapParams(
 				params.pinSize = value;
 				break;
 				
+			// For the "zoom range" parameter, check for help and parse the value into a tuple of numbers, ensuring that the minimum value is at least 1 and that the maximum value is greater than or equal to the minimum value
 			case "zoomrange":
 				if (checkForHelp(zoomRangeHelpMessageString)) break;
 				params.zoomRange = parseCoordsAndRanges(value, [1, 15]);
@@ -241,6 +302,7 @@ export function parseFantasyMapParams(
 				if (params.zoomRange[1] < params.zoomRange[0]) params.zoomRange[1] = params.zoomRange[0];
 				break;
 
+			// For the "default zoom increment" parameter, check for help and parse the value into a number, ensuring that it is a positive number
 			case "defaultzoomincrement":
 				if (
 					checkForHelp(
@@ -255,16 +317,19 @@ export function parseFantasyMapParams(
 				params.defaultZoomIncrement = Number(value) || 1;
 				break;
 
+			// For the "default zoom level" parameter, check for help and parse the value into a number, ensuring that it is a positive number
 			case "defaultzoomlevel":
 				if (checkForHelp(defaultZoomLevelHelpMessageString)) break;
 				params.defaultZoomLevel = Number(value) > 0 ? Number(value) : 1;
 				break;
 
+			// For the "default location" parameter, check for help and parse the value into a tuple of numbers representing latitude and longitude
 			case "defaultlocation":
 				if (checkForHelp(defaultLocationHelpMessageString)) break;
 				params.defaultLocation = parseCoordsAndRanges(value, [0, 0]);
 				break;
-
+				
+			// For the "repeat" parameter, check for help and determine the repeat behavior based on the value, supporting various keywords for horizontal, vertical, both, or no repeat
 			case "repeat": {
 				if (checkForHelp(repeatHelpMessageString)) break;
 				const normalizedValue = value.toLowerCase();
@@ -284,23 +349,27 @@ export function parseFantasyMapParams(
 				break;
 			}
 
+			// For the "latitude range" and "longitude range" parameters, check for help and parse the values into tuples of numbers representing the minimum and maximum bounds for latitude and longitude, ensuring that the maximum value is greater than or equal to the minimum value
 			case "latituderange":
 				if (checkForHelp(latitudeRangeHelpMessageString)) break;
 				params.latitudeRange = parseCoordsAndRanges(value, [-90, 90]);
 				if (params.latitudeRange[1] < params.latitudeRange[0]) params.latitudeRange[1] = params.latitudeRange[0] + 100
 				break;
 
+			// For the longitude range, we allow values greater than 360 to support maps that wrap around the globe multiple times. We just need to ensure that the max value is greater than the min value.
 			case "longituderange":
 				if (checkForHelp(longitudeRangeHelpMessageString)) break;
 				params.longitudeRange = parseCoordsAndRanges(value, [0, 360]);
 				if (params.longitudeRange[1] > params.longitudeRange[0]) params.longitudeRange[1] = params.longitudeRange[1] + 100
 				break;
 
+			// For the "prime meridian offset" parameter, check for help and parse the value into a tuple of numbers representing the latitude and longitude offsets to apply to the map
 			case "primemeridianoffset":
 				if (checkForHelp(primeMeridianOffsetHelpMessageString)) break;
 				params.primeMeridianOffset = parseCoordsAndRanges(value, [0, 0]);
 				break;
 
+			// If the key does not match any known parameter, log a warning and add a help message indicating that the parameter is unknown
 			default:
 				console.warn(`Unknown fantasy-map parameter: "${rawKey}"`);
 				addHelpMessage(
@@ -310,6 +379,7 @@ export function parseFantasyMapParams(
 		}
 	}
 
+	// Compile the final parameters object, using default values from the settings or hardcoded defaults if specific parameters were not provided
 	const finalParams: FantasyMapParams = {
 		map: params.map ?? "",
 		mapIDs: params.mapIDs ?? [],
@@ -324,6 +394,7 @@ export function parseFantasyMapParams(
 		primeMeridianOffset: params.primeMeridianOffset ?? [0, 0]
 	};
 
+	// If any help messages were generated during parsing, compile them into a single message and display it to the user
 	if (helpMessages.length > 0) {
 		void fantasyMapHelpMessage(
 			app,
@@ -335,9 +406,11 @@ export function parseFantasyMapParams(
 		);
 	}
 
+	// Return the final parameters object to be used for rendering the fantasy map
 	return finalParams;
 }
 
+// Helper function to parse coordinate pairs and ranges from a string in the format "(value1, value2)", returning a tuple of numbers or a default value if parsing fails
 function parseCoordsAndRanges(
 	coords: string,
 	defaultVal: [number, number]
@@ -346,6 +419,7 @@ function parseCoordsAndRanges(
 	return match ? [Number(match[1]), Number(match[2])] : defaultVal;
 }
 
+// Helper function to validate that a given string is a valid CSS size value by attempting to apply it to a temporary DOM element and checking if the style was accepted
 export function isValidPinSize(value: string): boolean {
 	const trimmed = value.trim();
 	if (!trimmed) return false;
@@ -360,6 +434,7 @@ export function isValidPinSize(value: string): boolean {
 	return result;
 }
 
+// Function to render help messages in the fantasy map component, using Obsidian's MarkdownRenderer to display the message content and optionally including a link for users to copy a template for creating their own fantasy map code blocks
 export async function fantasyMapHelpMessage(
 	app: App,
 	element: HTMLElement,
@@ -376,6 +451,7 @@ export async function fantasyMapHelpMessage(
 	if (includeCopyLink) appendCopyLink(container);
 }
 
+// Function to append a link to the provided container that allows users to copy a template for creating their own fantasy map code blocks, with feedback on whether the copy action was successful or not
 export function appendCopyLink(container: HTMLElement) {
 	const wrapper = container.createDiv({ cls: "Fantasy-map-copy-link" });
 	const link = wrapper.createEl("a", {
@@ -387,6 +463,7 @@ export function appendCopyLink(container: HTMLElement) {
 		void handleCopyClick(event);
 	});
 
+	// Handler function for the copy link click event, which attempts to write the template string to the clipboard and provides user feedback on success or failure
 	async function handleCopyClick(event: MouseEvent) {
 		event.preventDefault();
 
@@ -404,6 +481,7 @@ export function appendCopyLink(container: HTMLElement) {
 	}
 }
 
+// Helper function to compile an array of help messages into a single formatted string with a title, or return null if there are no messages to display
 export function compileHelpMessages(
 	messages: string[],
 	title: string
