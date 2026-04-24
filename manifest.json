@@ -6,6 +6,5 @@
 	"description": "Upload your own maps and plant pins on important locations, each linking back to your notes.",
 	"author": "Daniel Fiuk",
 	"authorUrl": "https://danielfiuk.ca",
-	"isDesktopOnly": true,
-	"repo": "Daniel-Fiuk/fantasy-map",
+	"isDesktopOnly": true
 }
