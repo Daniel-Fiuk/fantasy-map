@@ -1,6 +1,6 @@
 # Fantasy Map: interactive maps for Obsidian
 Are you a writer, a world builder, or a really dedicated Dungeon Master or note taker? Do you want to manage and locate your notes on a map of your choosing? Well this plugin is for you!
-Introducing the Fantasy Map plugin for Obsidian! This plugin allows you to upload any image to your Obsidian vault and create an interactive map where you can link to notes that call back to a specific location.
+Introducing Fantasy Map for Obsidian! Upload any image to your Obsidian vault and create an interactive map where you can link to notes that call back to a specific location.
 
 <div align="center"><img width="80%" height="auto" alt="Screenshot 2026-04-22 171431" src="https://github.com/user-attachments/assets/a7a86b64-c94b-43fe-becb-0f902b49357e" /></div>
 
