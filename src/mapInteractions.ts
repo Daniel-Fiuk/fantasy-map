@@ -1,3 +1,4 @@
+import type { App } from "obsidian";
 import type { FantasyMapParams } from "./paramaters";
 import type { FantasyMapSettings } from "./settings";
 
@@ -21,6 +22,7 @@ interface MapInteractionOptions {
 	tilesLayer: HTMLElement;
 	toolbar: HTMLElement;
 	parameters: FantasyMapParams;
+	settings: FantasyMapSettings;
 	settings: FantasyMapSettings;
 	onViewportChanged: (
 		offsetX: number,

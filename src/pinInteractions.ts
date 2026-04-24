@@ -11,6 +11,8 @@ import {
 	showCustomPreview,
 	hideCustomPreview,
 	destroyCustomPreview,
+	setPreviewTimeoutClearer,
+	setPreviewTimeoutScheduler,
 } from "./previewInteractions";
 
 import defaultPinIcon from "./assets/Pin.svg";
@@ -177,6 +179,16 @@ class PinInteractionManager implements PinInteractionController {
 		this.parameters = options.parameters;
 		this.ctx = options.ctx;
 		this.setMapPanningEnabled = options.setMapPanningEnabled;
+
+		setPreviewTimeoutClearer(() => {
+			this.clearHoverDelay();
+		});
+
+		setPreviewTimeoutScheduler(() => {
+			this.startHoverDelay(750, () => {
+				hideCustomPreview();
+			});
+		});
 	}
 
 	async init(): Promise<void> {
@@ -208,8 +220,6 @@ class PinInteractionManager implements PinInteractionController {
 		this.wrapper.addEventListener("pointermove", this.onWrapperPointerMove);
 		this.wrapper.addEventListener("pointerup", this.onWrapperPointerUp);
 		this.wrapper.addEventListener("pointerleave", this.onWrapperPointerLeave);
-		
-		return;
 	}
 
 	updatePinPositions(
@@ -303,11 +313,17 @@ class PinInteractionManager implements PinInteractionController {
 		);
 
 		const parser = new DOMParser();
-		
+
 		if (pinFile) {
 			if (pinFile.extension.toLowerCase() === "svg") {
-				const customPinIcon = this.addSvgViewBoxPadding(await this.app.vault.cachedRead(pinFile), 2);
-				const customSVGDoc = parser.parseFromString(customPinIcon, "image/svg+xml");
+				const customPinIcon = this.addSvgViewBoxPadding(
+					await this.app.vault.cachedRead(pinFile),
+					2
+				);
+				const customSVGDoc = parser.parseFromString(
+					customPinIcon,
+					"image/svg+xml"
+				);
 				pinIconEl.replaceChildren(customSVGDoc.documentElement);
 			} else {
 				const url = this.app.vault.getResourcePath(pinFile);
@@ -320,7 +336,10 @@ class PinInteractionManager implements PinInteractionController {
 			}
 		} else {
 			const defaultPaddedSVG = this.addSvgViewBoxPadding(defaultPinIcon, 2);
-			const defaultSVGDoc = parser.parseFromString(defaultPaddedSVG, "image/svg+xml");
+			const defaultSVGDoc = parser.parseFromString(
+				defaultPaddedSVG,
+				"image/svg+xml"
+			);
 			pinIconEl.replaceChildren(defaultSVGDoc.documentElement);
 		}
 
@@ -384,6 +403,7 @@ class PinInteractionManager implements PinInteractionController {
 	private startHoverDelay(time: number, callback: () => void): void {
 		this.clearHoverDelay();
 		this.hoverTimeout = window.setTimeout(() => {
+			this.hoverTimeout = null;
 			callback();
 		}, time);
 	}
@@ -444,7 +464,10 @@ class PinInteractionManager implements PinInteractionController {
 	private addSvgViewBoxPadding(svg: string, pad: number): string {
 		return svg.replace(/viewBox="([^"]+)"/, (_match, vb: string) => {
 			const parts = vb.trim().split(/\s+/).map((part) => Number(part));
-			if (parts.length !== 4 || parts.some(value => value === undefined || Number.isNaN(value))) {
+			if (
+				parts.length !== 4 ||
+				parts.some((value) => value === undefined || Number.isNaN(value))
+			) {
 				return `viewBox="${vb}"`;
 			}
 
@@ -453,7 +476,7 @@ class PinInteractionManager implements PinInteractionController {
 			y ??= 0;
 			w ??= 500;
 			h ??= 500;
-			
+
 			return `viewBox="${x - pad} ${y - pad} ${w + pad * 2} ${h + pad * 2}"`;
 		});
 	}

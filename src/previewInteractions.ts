@@ -3,6 +3,7 @@ import type { Pin } from "./pinInteractions";
 
 let currentPreview: HTMLElement | null = null;
 let clearHoverDelay: (() => void) | null = null;
+let scheduleHoverHide: (() => void) | null = null;
 
 export async function showCustomPreview(
 	pin: Pin,
@@ -21,7 +22,7 @@ export async function showCustomPreview(
 	container.empty();
 
 	const headerEl = container.createDiv({ cls: "fm-hover-header" });
-	
+
 	const titleLink = headerEl.createEl("a", {
 		cls: "internal-link fm-hover-title",
 		text: pin.note.basename,
@@ -29,13 +30,14 @@ export async function showCustomPreview(
 
 	const cache = app.metadataCache.getFileCache(pin.note);
 	const frontMatter = cache?.frontmatter;
-	const frontMatterLocation = frontMatter ? frontMatter["fm-location"] as string : "";
-	
+	const frontMatterLocation = frontMatter
+		? (frontMatter["fm-location"] as string)
+		: "";
+
 	const subHeaderEl = container.createDiv({ cls: "fm-hover-header" });
 	subHeaderEl.createEl("code", {
-		cls: "",
 		text: frontMatterLocation,
-	})
+	});
 
 	titleLink.setAttr("href", pin.note.path);
 	titleLink.dataset.href = app.metadataCache.fileToLinktext(
@@ -46,9 +48,13 @@ export async function showCustomPreview(
 	titleLink.onclick = async (e) => {
 		e.preventDefault();
 		e.stopPropagation();
-		await app.workspace.openLinkText(pin.note.path, pin.note.path, e.ctrlKey || e.metaKey);
+		await app.workspace.openLinkText(
+			pin.note.path,
+			pin.note.path,
+			e.ctrlKey || e.metaKey
+		);
 	};
-	
+
 	const contentEl = container.createDiv({ cls: "fm-hover-content" });
 	const fileText = await app.vault.read(pin.note);
 	const body = stripFrontmatter(fileText);
@@ -71,6 +77,10 @@ export function setPreviewTimeoutClearer(clearer: (() => void) | null): void {
 	clearHoverDelay = clearer;
 }
 
+export function setPreviewTimeoutScheduler(scheduler: (() => void) | null): void {
+	scheduleHoverHide = scheduler;
+}
+
 export function hideCustomPreview() {
 	if (currentPreview) {
 		currentPreview.removeClass("is-visible");
@@ -91,6 +101,7 @@ function stripFrontmatter(text: string): string {
 			return text.slice(end + 4).trimStart();
 		}
 	}
+
 	return text;
 }
 
@@ -102,7 +113,7 @@ function attachPreviewHoverHandlers() {
 	};
 
 	currentPreview.onmouseleave = () => {
-		hideCustomPreview();
+		scheduleHoverHide?.();
 	};
 }
 
@@ -127,7 +138,11 @@ function wirePreviewLinks(
 			e.preventDefault();
 			e.stopPropagation();
 
-			await app.workspace.openLinkText(linktext, sourcePath, e.ctrlKey || e.metaKey);
+			await app.workspace.openLinkText(
+				linktext,
+				sourcePath,
+				e.ctrlKey || e.metaKey
+			);
 		};
 	});
 

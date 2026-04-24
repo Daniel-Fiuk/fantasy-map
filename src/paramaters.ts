@@ -5,6 +5,7 @@ import {
 	MarkdownRenderer,
 	Notice,
 } from "obsidian";
+
 import { FantasyMapSettings } from "./settings";
 
 export interface FantasyMapParams {
@@ -286,11 +287,13 @@ export function parseFantasyMapParams(
 			case "latituderange":
 				if (checkForHelp(latitudeRangeHelpMessageString)) break;
 				params.latitudeRange = parseCoordsAndRanges(value, [-90, 90]);
+				if (params.latitudeRange[1] < params.latitudeRange[0]) params.latitudeRange[1] = params.latitudeRange[0] + 100
 				break;
 
 			case "longituderange":
 				if (checkForHelp(longitudeRangeHelpMessageString)) break;
 				params.longitudeRange = parseCoordsAndRanges(value, [0, 360]);
+				if (params.longitudeRange[1] > params.longitudeRange[0]) params.longitudeRange[1] = params.longitudeRange[1] + 100
 				break;
 
 			case "primemeridianoffset":
