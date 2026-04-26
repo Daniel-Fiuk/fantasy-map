@@ -885,7 +885,7 @@ export function parseSearchQuery(input: string): SearchNode | null {
 			continue;
 		}
 		// term
-		orGroups[orGroups.length - 1].push({ kind: "term", text: tok.value ?? null });
+		orGroups[orGroups.length - 1].push({ kind: "term", text: tok.value });
 		lastWasOperator = false;
 	}
 
@@ -896,10 +896,11 @@ export function parseSearchQuery(input: string): SearchNode | null {
 
 	const andNodes: SearchNode[] = orGroups
 		.filter((group) => group.length > 0)
-		.map((group) =>
+		.map((group): SearchNode | undefined =>
 			group.length === 1 ? group[0] : { kind: "and", children: group }
-		) ?? { };
-
+		)
+		.filter((node): node is SearchNode => node !== undefined);
+	
 	if (andNodes ===  null || andNodes.length === 0) return null;
 	if (andNodes.length === 1) return andNodes[0] ?? null;
 	return { kind: "or", children: andNodes };
