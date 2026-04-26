@@ -141,7 +141,7 @@ export default class SimpleMap extends Plugin {
 		const searchSuggestions = searchWrapper.createEl("div", {
 			cls: "sm-search-suggestions",
 		});
-		searchSuggestions.style.display = "none";
+		searchSuggestions.setCssProps({ display: "none" });
 
 		// Set the initial value of the zoom increment input to either the value from the parameters or the default from settings
 		zoomInput.value = String(
