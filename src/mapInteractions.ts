@@ -1,4 +1,3 @@
-import type { App } from "obsidian";
 import type { FantasyMapParams } from "./paramaters";
 import type { FantasyMapSettings } from "./settings";
 
