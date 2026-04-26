@@ -6,10 +6,10 @@ import {
 	Notice,
 } from "obsidian";
 
-import { FantasyMapSettings } from "./settings";
+import { SimleMapSettings } from "./settings";
 
-// Interface defining the parameters for the fantasy map
-export interface FantasyMapParams {
+// Interface defining the parameters for the simple map
+export interface SimpleMapParams {
 	map: string;
 	mapIDs: string[];
 	pinSize: string;
@@ -63,7 +63,7 @@ const helpHelpMessageString =
 	"**\"help, -h, onfo, instruction, -i, or usage\"**: Include one of these keywords to display usage instructions.";
 
 // Function to compile all help messages into an array
-function allHelpMessages(settings: FantasyMapSettings): string[] {
+function allHelpMessages(settings: SimpleMapSettings): string[] {
 	return [
 		mapHelpMessageString,
 		mapIDsHelpMessageString,
@@ -82,11 +82,11 @@ function allHelpMessages(settings: FantasyMapSettings): string[] {
 
 //#endregion
 
-// Template string for users to copy when they want to create a new fantasy map code block or note frontmatter
+// Template string for users to copy when they want to create a new simple map code block or note frontmatter
 //#region Copy Blocks
 
-export const fantasyMapCodeBlockCopyToClipboardString = [
-	"```fantasy-map",
+export const simpleMapCodeBlockCopyToClipboardString = [
+	"```simple-map",
 	"map:",
 	"id:",
 	"pin size:",
@@ -101,11 +101,11 @@ export const fantasyMapCodeBlockCopyToClipboardString = [
 	"```",
 ].join("\n");
 
-export const fantasyMapFrontMatterCopyToClipboardString = [
+export const simpleMapFrontMatterCopyToClipboardString = [
 	"---",
-	"fm-location: (lat, lng)",
-	"fm-id:",
-	"fm-pin-icon:",
+	"sm-location: (lat, lng)",
+	"sm-id:",
+	"sm-pin-icon:",
 	"---",
 ].join("\n");
 
@@ -137,49 +137,49 @@ const affirmatives = [
 ];
 
 const verticalRepeatAffirmatives = [
-	"vertical", 
-	"vert", 
-	"ver", 
-	"vr", 
-	"v", 
+	"vertical",
+	"vert",
+	"ver",
+	"vr",
+	"v",
 	"y"
 ];
 
 const horizontalRepeatAffirmatives = [
-	"horizontal", 
-	"hori", 
-	"hor", 
-	"hr", 
-	"h", 
+	"horizontal",
+	"hori",
+	"hor",
+	"hr",
+	"h",
 	"x"
 ];
 
 const bothRepeatAffirmatives = [
-	"both", 
+	"both",
 	"b"
 ];
 
 const helpKeywords = [
-	"help", 
-	"-h", 
-	"info", 
-	"instruction", 
-	"-i", 
+	"help",
+	"-h",
+	"info",
+	"instruction",
+	"-i",
 	"usage"
 ];
 
 //#endregion
 
-// Main function to parse the fantasy map parameters from the source string
-export function parseFantasyMapParams(
+// Main function to parse the simple map parameters from the source string
+export function parseSimpleMapParams(
 	app: App,
 	source: string,
 	element: HTMLElement,
 	ctx: MarkdownPostProcessorContext,
 	component: Component,
-	settings: FantasyMapSettings
-): FantasyMapParams {
-	
+	settings: SimpleMapSettings
+): SimpleMapParams {
+
 	// Split the source into lines, trim whitespace, and filter out empty lines
 	const lines = source
 		.split("\n")
@@ -187,7 +187,7 @@ export function parseFantasyMapParams(
 		.filter(Boolean);
 
 	// Object to hold the parsed parameters, initialized as empty
-	const params: Partial<FantasyMapParams> = {};
+	const params: Partial<SimpleMapParams> = {};
 	const helpMessages: string[] = [];
 
 	// Helper function to add a help message to the list if it's not already included
@@ -214,7 +214,7 @@ export function parseFantasyMapParams(
 
 	// Process each line to extract parameters or detect help requests
 	for (const line of lines) {
-		
+
 		// Check if the line is a help request and show all help messages if it is
 		if (helpKeywords.includes(line.toLowerCase())) {
 			allHelpMessages(settings).forEach(addHelpMessage);
@@ -252,7 +252,7 @@ export function parseFantasyMapParams(
 
 		// Process the parameter based on the normalized key
 		switch (key) {
-			
+
 			// For the "map" parameter, check for help and validate that a value is provided
 			case "map":
 				if (checkForHelp(mapHelpMessageString)) break;
@@ -261,7 +261,7 @@ export function parseFantasyMapParams(
 				}
 				params.map = value;
 				break;
-				
+
 			// For the "id" parameter, check for help and parse the comma-separated list of IDs into an array
 			case "id":
 				if (checkForHelp(mapIDsHelpMessageString)) break;
@@ -293,7 +293,7 @@ export function parseFantasyMapParams(
 
 				params.pinSize = value;
 				break;
-				
+
 			// For the "zoom range" parameter, check for help and parse the value into a tuple of numbers, ensuring that the minimum value is at least 1 and that the maximum value is greater than or equal to the minimum value
 			case "zoomrange":
 				if (checkForHelp(zoomRangeHelpMessageString)) break;
@@ -328,7 +328,7 @@ export function parseFantasyMapParams(
 				if (checkForHelp(defaultLocationHelpMessageString)) break;
 				params.defaultLocation = parseCoordsAndRanges(value, [0, 0]);
 				break;
-				
+
 			// For the "repeat" parameter, check for help and determine the repeat behavior based on the value, supporting various keywords for horizontal, vertical, both, or no repeat
 			case "repeat": {
 				if (checkForHelp(repeatHelpMessageString)) break;
@@ -434,8 +434,8 @@ export function isValidPinSize(value: string): boolean {
 	return result;
 }
 
-// Function to render help messages in the fantasy map component, using Obsidian's MarkdownRenderer to display the message content and optionally including a link for users to copy a template for creating their own fantasy map code blocks
-export async function fantasyMapHelpMessage(
+// Function to render help messages in the simple map component, using Obsidian's MarkdownRenderer to display the message content and optionally including a link for users to copy a template for creating their own simple map code blocks
+export async function simpleMapHelpMessage(
 	app: App,
 	element: HTMLElement,
 	message: string | null,
@@ -451,11 +451,11 @@ export async function fantasyMapHelpMessage(
 	if (includeCopyLink) appendCopyLink(container);
 }
 
-// Function to append a link to the provided container that allows users to copy a template for creating their own fantasy map code blocks, with feedback on whether the copy action was successful or not
+// Function to append a link to the provided container that allows users to copy a template for creating their own simple map code blocks, with feedback on whether the copy action was successful or not
 export function appendCopyLink(container: HTMLElement) {
-	const wrapper = container.createDiv({ cls: "Fantasy-map-copy-link" });
+	const wrapper = container.createDiv({ cls: "Simple-map-copy-link" });
 	const link = wrapper.createEl("a", {
-		text: "Copy fantasy-map template",
+		text: "Copy simple-map template",
 		href: "#",
 	});
 
@@ -468,15 +468,15 @@ export function appendCopyLink(container: HTMLElement) {
 		event.preventDefault();
 
 		try {
-			await navigator.clipboard.writeText(fantasyMapCodeBlockCopyToClipboardString);
+			await navigator.clipboard.writeText(simpleMapCodeBlockCopyToClipboardString);
 			link.setText("Copied");
-			new Notice("Fantasy-map template copied");
+			new Notice("Simple-map template copied");
 			window.setTimeout(() => {
-				link.setText("Copy fantasy-map template");
+				link.setText("Copy simple-map template");
 			}, 1500);
 		} catch (err) {
-			console.warn("Fantasy-map copy failed", err);
-			new Notice("Failed to copy fantasy-map template");
+			console.warn("Simple-map copy failed", err);
+			new Notice("Failed to copy simple-map template");
 		}
 	}
 }

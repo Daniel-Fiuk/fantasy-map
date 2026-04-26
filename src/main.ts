@@ -6,10 +6,10 @@ import {
 } from "obsidian";
 import {
 	DEFAULT_SETTINGS,
-	FantasyMapSettings,
-	FantasyMapSettingTab,
+	SimpleMapSettings,
+	SimpleMapSettingTab,
 } from "./settings";
-import { parseFantasyMapParams, fantasyMapHelpMessage } from "./paramaters";
+import { parseSimpleMapParams, simpleMapHelpMessage } from "./paramaters";
 import { createMapInteractionController } from "./mapInteractions";
 import { createPinInteractionController } from "./pinInteractions";
 import {
@@ -17,17 +17,17 @@ import {
 	setPreviewTimeoutClearer,
 } from "./previewInteractions";
 
-export default class FantasyMap extends Plugin {
-	settings: FantasyMapSettings;
+export default class SimpleMap extends Plugin {
+	settings: SimpleMapSettings;
 
 	// Load the plugin, initialize settings, and register the markdown code block processor
 	async onload() {
 		await this.loadSettings();
 
-		this.addSettingTab(new FantasyMapSettingTab(this.app, this));
+		this.addSettingTab(new SimpleMapSettingTab(this.app, this));
 
 		this.registerMarkdownCodeBlockProcessor(
-			"fantasy-map",
+			"simple-map",
 			this.main.bind(this)
 		);
 	}
@@ -42,7 +42,7 @@ export default class FantasyMap extends Plugin {
 		this.settings = Object.assign(
 			{},
 			DEFAULT_SETTINGS,
-			(await this.loadData()) as Partial<FantasyMapSettings>
+			(await this.loadData()) as Partial<SimpleMapSettings>
 		);
 	}
 
@@ -51,14 +51,14 @@ export default class FantasyMap extends Plugin {
 		await this.saveData(this.settings);
 	}
 
-	// Main function to process the markdown code block and render the fantasy map
+	// Main function to process the markdown code block and render the simple map
 	async main(
 		source: string,
 		element: HTMLElement,
 		ctx: MarkdownPostProcessorContext
 	) {
 		// Parse parameters from the code block and validate the map file
-		const parameters = parseFantasyMapParams(
+		const parameters = parseSimpleMapParams(
 			this.app,
 			source,
 			element,
@@ -66,13 +66,13 @@ export default class FantasyMap extends Plugin {
 			this as Component,
 			this.settings
 		);
-		
+
 		// If the map parameter is missing or empty, display an error message and return
 		if (parameters.map == null || parameters.map.trim() === "") return;
 
 		// Attempt to find the map file in the vault using various methods
 		const mapFile: TFile | null = (() => {
-			
+
 			// Normalize the map parameter by removing surrounding brackets and trimming whitespace
 			const normalized = parameters.map.replace(/^\[\[|\]\]$/g, "").trim();
 
@@ -81,7 +81,7 @@ export default class FantasyMap extends Plugin {
 				normalized,
 				ctx.sourcePath
 			);
-			
+
 			// If the linked file exists and is a TFile, return it
 			if (linked instanceof TFile) return linked;
 
@@ -95,10 +95,10 @@ export default class FantasyMap extends Plugin {
 
 		// If the map file could not be found, display an error message and return
 		if (!mapFile) {
-			await fantasyMapHelpMessage(
+			await simpleMapHelpMessage(
 				this.app,
 				element,
-				`Fantasy Map Error: Map file "${parameters.map}" not found in vault! Double-check the file name and path, and make sure the file is located somewhere in your vault.`,
+				`Simple Map Error: Map file "${parameters.map}" not found in vault! Double-check the file name and path, and make sure the file is located somewhere in your vault.`,
 				false,
 				ctx.sourcePath,
 				this
@@ -106,31 +106,43 @@ export default class FantasyMap extends Plugin {
 			return;
 		}
 
-		// Clear the container element and set up the structure for the fantasy map
+		// Clear the container element and set up the structure for the simple map
 		element.empty();
-		element.addClass("fantasy-map-container");
+		element.addClass("sm-container");
 
 		// Create a new Obsidian component to manage the lifecycle of the map and its interactions
 		const renderComponent = new Component();
 		(this as Component).addChild(renderComponent);
 
 		// Create the main wrapper for the map, along with layers for the background and tiles, and a toolbar for controls
-		const mapWrapper = element.createEl("div", { cls: "fantasy-map-wrapper" });
-		const bgLayer = mapWrapper.createEl("div", { cls: "fantasy-map-background" });
-		const tilesLayer = mapWrapper.createEl("div", { cls: "fantasy-map-tiles" });
-		
+		const mapWrapper = element.createEl("div", { cls: "sm-wrapper" });
+		const bgLayer = mapWrapper.createEl("div", { cls: "sm-background" });
+		const tilesLayer = mapWrapper.createEl("div", { cls: "sm-tiles" });
+
 		// Create a toolbar with buttons for zooming in, resetting the view, and zooming out, as well as an input for adjusting the zoom increment
-		const toolbar = mapWrapper.createEl("div", { cls: "fantasy-map-toolbar" });
+		const toolbar = mapWrapper.createEl("div", { cls: "sm-toolbar" });
 		toolbar.createEl("button", { cls: "fm-zoom-in", text: "+" });
 		toolbar.createEl("button", { cls: "fm-reset", text: "Reset" });
 		toolbar.createEl("button", { cls: "fm-zoom-out", text: "-" });
-		
+
 		// Create an input element for adjusting the zoom increment, and set its initial value based on the parameters or settings
 		const zoomInput = toolbar.createEl("input", {
 			cls: "fm-zoom-step",
 			type: "number",
 		});
-		
+
+		// Create the search field and its prediction dropdown. The dropdown lives inside the toolbar so it inherits the toolbar's hover/focus visibility behavior.
+		const searchWrapper = toolbar.createEl("div", { cls: "fm-search" });
+		const searchInput = searchWrapper.createEl("input", {
+			cls: "fm-search-input",
+			type: "text",
+			attr: { placeholder: 'Search pins (use "quotes", && / and, || / or)' },
+		});
+		const searchSuggestions = searchWrapper.createEl("div", {
+			cls: "fm-search-suggestions",
+		});
+		searchSuggestions.style.display = "none";
+
 		// Set the initial value of the zoom increment input to either the value from the parameters or the default from settings
 		zoomInput.value = String(
 			parameters.defaultZoomIncrement ?? this.settings.defaultZoomIncrement
@@ -148,7 +160,7 @@ export default class FantasyMap extends Plugin {
 
 		// Once the map image has loaded, set up the map wrapper and background layer styles, create the tile elements for the map, and initialize the interaction controllers for both the map and the pins
 		mapImg.onload = async () => {
-			
+
 			// Calculate the aspect ratio of the map image and set the height of the map wrapper accordingly to maintain the correct proportions
 			const ratio = mapImg.naturalHeight / mapImg.naturalWidth;
 			const wrapperWidth = mapWrapper.clientWidth;
@@ -168,7 +180,7 @@ export default class FantasyMap extends Plugin {
 			// Create a grid of tile elements to cover the map area, and set their background images to the map image, ensuring that they are positioned correctly to create a seamless tiled effect
 			const tilesX = 3;
 			const tilesY = 3;
-			
+
 			// Loop through the number of tiles in both the X and Y directions to create the individual tile elements
 			for (let y = 0; y < tilesY; y++) {
 				for (let x = 0; x < tilesX; x++) {
@@ -187,7 +199,7 @@ export default class FantasyMap extends Plugin {
 
 			// Position the tiles correctly based on their data attributes to ensure they create a seamless tiled background
 			positionTiles(tilesLayer);
-			
+
 			// Initialize the interaction controllers for both the map and the pins, passing in the necessary parameters and callbacks to manage their behavior and interactions
 			let mapController: ReturnType<typeof createMapInteractionController> | null = null;
 
@@ -231,7 +243,84 @@ export default class FantasyMap extends Plugin {
 
 			// Initialize the map controller to set up event listeners and prepare it for managing map interactions such as panning and zooming
 			mapController.init();
-			
+
+			// Compute the dropdown's max width so it can grow past the input but never extend beyond the map container's right edge. Updated on every render so it tracks resizes.
+			const updateDropdownMaxWidth = () => {
+				const wrapperRect = mapWrapper.getBoundingClientRect();
+				const searchRect = searchWrapper.getBoundingClientRect();
+				// 8px buffer keeps the dropdown a hair inside the rounded container border.
+				const available = Math.max(
+					0,
+					wrapperRect.right - searchRect.left - 8
+				);
+				searchWrapper.style.setProperty(
+					"--sm-dropdown-max-width",
+					`${available}px`
+				);
+			};
+
+			// Wire up the toolbar search field. Filtering is recomputed each keystroke; suggestions are rebuilt from the same query and clicking one centers the map on that pin.
+			const renderSuggestions = (query: string) => {
+				searchSuggestions.empty();
+				if (!query.trim()) {
+					searchSuggestions.style.display = "none";
+					return;
+				}
+				const items = pinController.getSuggestions(query, 8);
+				if (items.length === 0) {
+					searchSuggestions.style.display = "none";
+					return;
+				}
+				updateDropdownMaxWidth();
+				searchSuggestions.style.display = "";
+				for (const item of items) {
+					const row = searchSuggestions.createEl("div", {
+						cls: "fm-search-suggestion",
+					});
+					row.createEl("span", {
+						cls: "fm-search-suggestion-name",
+						text: item.label,
+					});
+					// Skip the meta line when the match is on the note name itself; otherwise capitalize the property label for display.
+					if (item.property !== "name") {
+						const propLabel =
+							item.property.charAt(0).toUpperCase() + item.property.slice(1);
+						row.createEl("span", {
+							cls: "fm-search-suggestion-meta",
+							text: ` ${propLabel}: "${item.value}"`,
+						});
+					}
+					row.addEventListener("mousedown", (e) => {
+						e.preventDefault();
+						searchInput.value = `"${item.value}"`;
+						pinController.applySearch(searchInput.value);
+						mapController?.centerOnLocation(
+							item.pin.location.lat,
+							item.pin.location.lng
+						);
+						searchSuggestions.empty();
+						searchSuggestions.style.display = "none";
+					});
+				}
+			};
+
+			searchInput.addEventListener("input", () => {
+				const q = searchInput.value;
+				pinController.applySearch(q);
+				renderSuggestions(q);
+			});
+
+			searchInput.addEventListener("focus", () => {
+				renderSuggestions(searchInput.value);
+			});
+
+			searchInput.addEventListener("blur", () => {
+				// Defer hiding so a click on a suggestion can fire its mousedown handler first.
+				window.setTimeout(() => {
+					searchSuggestions.style.display = "none";
+				}, 150);
+			});
+
 			// Register a cleanup function to destroy the interaction controllers and clear any timeouts when the component is unloaded or re-rendered, ensuring that there are no lingering event listeners or resources being used
 			renderComponent.register(() => {
 				setPreviewTimeoutClearer(null);
@@ -242,7 +331,7 @@ export default class FantasyMap extends Plugin {
 
 		// Helper function to position the tile elements based on their data attributes, ensuring that they are arranged in a grid to create a seamless tiled background effect
 		function positionTiles(tilesLayerEl: HTMLElement) {
-			
+
 			// Get all the tile elements within the tiles layer and convert the NodeList to an array for easier manipulation
 			const tiles = Array.from(tilesLayerEl.querySelectorAll(".fm-tile"));
 

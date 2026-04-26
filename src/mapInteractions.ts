@@ -1,7 +1,7 @@
-import type { FantasyMapParams } from "./paramaters";
-import type { FantasyMapSettings } from "./settings";
+import type { SimpleMapParamaters } from "./paramaters";
+import type { SimpleMapSettings } from "./settings";
 
-// Manages panning and zooming interactions for the fantasy map
+// Manages panning and zooming interactions for the simple map
 export interface PanZoomState {
 	zoom: number;
 	offsetX: number;
@@ -14,6 +14,7 @@ export interface PanZoomState {
 export interface MapInteractionController {
 	init(): void;
 	setPanningEnabled(enabled: boolean): void;
+	centerOnLocation(lat: number, lng: number): void;
 	destroy(): void;
 }
 
@@ -41,7 +42,7 @@ export function createMapInteractionController(
 	return new MapInteractionManager(options);
 }
 
-// Implementation of the MapInteractionController interface, managing panning and zooming interactions for the fantasy map
+// Implementation of the MapInteractionController interface, managing panning and zooming interactions for the simple map
 class MapInteractionManager implements MapInteractionController {
 	private readonly wrapper: HTMLElement;
 	private readonly bgLayer: HTMLElement;
@@ -71,7 +72,7 @@ class MapInteractionManager implements MapInteractionController {
 
 		this.wrapper.setPointerCapture(e.pointerId);
 	};
-	
+
 	// Handle pointer move events to update the map's offset based on the movement, applying clamping and updating the transform
 	private readonly onPointerMove = (e: PointerEvent) => {
 		if (!this.isPanning || !this.panningEnabled) return;
@@ -179,6 +180,35 @@ class MapInteractionManager implements MapInteractionController {
 		}
 	}
 
+	// Center the map on the supplied geographic location at the current zoom level. Mirrors the offset math used in reset() so pins land in the middle of the viewport.
+	centerOnLocation(lat: number, lng: number): void {
+		const rect = this.wrapper.getBoundingClientRect();
+		const viewW = rect.width;
+		const viewH = rect.height;
+
+		const worldW = viewW * this.state.zoom;
+		const worldH = viewH * this.state.zoom;
+
+		const latMin = this.parameters.latitudeRange[0] ?? -90;
+		const latMax = this.parameters.latitudeRange[1] ?? 90;
+		const latRng = latMax - latMin;
+
+		const lngMin = this.parameters.longitudeRange[0] ?? 0;
+		const lngMax = this.parameters.longitudeRange[1] ?? 360;
+		const lngRng = lngMax - lngMin;
+
+		const offset = this.parameters.primeMeridianOffset ?? [0, 0];
+
+		const targetLeft = -(lng + offset[1] - lngMin) / lngRng * worldW + (viewW / 2);
+		const targetTop = -(-lat + offset[0] - latMin) / latRng * worldH + (viewH / 2);
+
+		this.state.offsetX = targetLeft;
+		this.state.offsetY = targetTop;
+
+		this.clampOffsets();
+		this.applyTransform();
+	}
+
 	// Clean up event listeners and reset the panning state when the map interactions are destroyed
 	destroy(): void {
 		this.isPanning = false;
@@ -234,7 +264,7 @@ class MapInteractionManager implements MapInteractionController {
 
 	// Clamp the pan offsets to prevent panning beyond the edges of the map, taking into account the current zoom level and the repeat settings for the background
 	private clampOffsets(): void {
-		
+
 		// Get the size of the wrapper element to calculate the visible area of the map
 		const rect = this.wrapper.getBoundingClientRect();
 		const viewW = rect.width;
@@ -287,37 +317,37 @@ class MapInteractionManager implements MapInteractionController {
 	private reset(): void {
 		// set default zoom level
 		this.state.zoom = this.parameters.defaultZoomLevel || 1;
-		
+
 		// get wrapper window size
 		const rect = this.wrapper.getBoundingClientRect();
-		
+
 		// get height amd width of window
 		const viewW = rect.width;
 		const viewH = rect.height;
-		
+
 		// map scales based on view size
 		const worldW = viewW * this.state.zoom;
 		const worldH = viewH * this.state.zoom;
-		
+
 		// gat min, max, and range of latitude and longitude
 		const latMin = this.parameters.latitudeRange[0] ?? -90;
 		const latMax = this.parameters.latitudeRange[1] ?? 90;
 		const latRng = latMax - latMin;
-		
+
 		const lngMin = this.parameters.longitudeRange[0] ?? 0;
 		const lngMax = this.parameters.longitudeRange[1] ?? 360;
 		const lngRng = lngMax - lngMin;
-		
+
 		const defaultLatitude = -this.parameters.defaultLocation[0];
 		const defaultLongitude = this.parameters.defaultLocation[1];
-		
+
 		// find default position for map element
 		const defaultLeft = -(defaultLongitude + this.parameters.primeMeridianOffset[1] - lngMin) / lngRng * worldW + (viewW / 2);
 		const defaultTop = -(defaultLatitude + this.parameters.primeMeridianOffset[0] - latMin) / latRng * worldH + (viewH / 2);
 
 		this.state.offsetX = defaultLeft;
 		this.state.offsetY = defaultTop;
-		
+
 		this.clampOffsets();
 		this.applyTransform();
 	}

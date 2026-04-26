@@ -15,7 +15,7 @@ export async function showCustomPreview(
 ) {
 	if (!currentPreview) {
 		currentPreview = document.body.createDiv({
-			cls: "fantasy-map-hover-preview",
+			cls: "sm-hover-preview",
 		});
 		attachPreviewHoverHandlers();
 	}
@@ -25,21 +25,26 @@ export async function showCustomPreview(
 	container.empty();
 
 	// Create the header section of the preview, including the title and front matter location.
-	const headerEl = container.createDiv({ cls: "fm-hover-header" });
+	const headerEl = container.createDiv({ cls: "sm-hover-header" });
+	// When a search filter is active, append the matched property/value to the title so users see which field flagged this pin. Skip the append when the match is on the note's own name to avoid redundant labels like "Foo, name: Foo".
+	const titleText =
+		pin.matchInfo && pin.matchInfo.property !== "name"
+			? `${pin.note.basename}, ${capitalizeProperty(pin.matchInfo.property)}: "${pin.matchInfo.value}"`
+			: pin.note.basename;
 	const titleLink = headerEl.createEl("a", {
-		cls: "internal-link fm-hover-title",
-		text: pin.note.basename,
+		cls: "internal-link sm-hover-title",
+		text: titleText,
 	});
 
 	// Retrieve the front matter from the note's cache to display additional information in the preview header.
 	const cache = app.metadataCache.getFileCache(pin.note);
 	const frontMatter = cache?.frontmatter;
 	const frontMatterLocation = frontMatter
-		? (frontMatter["fm-location"] as string)
+		? (frontMatter["sm-location"] as string)
 		: "";
 
 	// Create a sub-header element to display the location in the preview.
-	const subHeaderEl = container.createDiv({ cls: "fm-hover-header" });
+	const subHeaderEl = container.createDiv({ cls: "sm-hover-header" });
 	subHeaderEl.createEl("code", {
 		text: frontMatterLocation,
 	});
@@ -63,7 +68,7 @@ export async function showCustomPreview(
 	};
 
 	// Render the content of the note associated with the pin into the preview container, stripping out any front matter for cleaner display.
-	const contentEl = container.createDiv({ cls: "fm-hover-content" });
+	const contentEl = container.createDiv({ cls: "sm-hover-content" });
 	const fileText = await app.vault.read(pin.note);
 	const body = stripFrontmatter(fileText);
 
@@ -78,7 +83,7 @@ export async function showCustomPreview(
 		top: `${rect.bottom + 8}px`,
 		left: `${rect.left}px`,
 	});
-	
+
 	// Make the preview visible by adding the appropriate CSS class, allowing for any associated styles to take effect.
 	container.addClass("is-visible");
 }
@@ -177,4 +182,10 @@ function wirePreviewLinks(
 			window.open(href, "_blank", "noopener,noreferrer");
 		};
 	});
+}
+
+// Capitalize the first character of a property name for display in the preview title (e.g. "tag" -> "Tag", "alias" -> "Alias"). Anything else is returned unchanged so multi-word frontmatter keys keep their original casing.
+function capitalizeProperty(property: string): string {
+	if (!property) return property;
+	return property.charAt(0).toUpperCase() + property.slice(1);
 }

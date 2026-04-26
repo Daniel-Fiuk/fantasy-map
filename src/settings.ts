@@ -1,36 +1,36 @@
 import { App, PluginSettingTab, Setting, Notice } from "obsidian";
-import FantasyMap from "./main";
+import SimpleMap from "./main";
 import {
-	fantasyMapCodeBlockCopyToClipboardString,
-	fantasyMapFrontMatterCopyToClipboardString,
+	simpleMapCodeBlockCopyToClipboardString,
+	simpleMapFrontMatterCopyToClipboardString,
 	isValidPinSize,
 } from "./paramaters";
 
-// Define the settings interface for the fantasy map plugin
-export interface FantasyMapSettings {
+// Define the settings interface for the simple map plugin
+export interface SimpleMapSettings {
 	defaultPinSize: string;
 	defaultZoomIncrement: number;
 }
 
-// Set the default settings for the fantasy map plugin
-export const DEFAULT_SETTINGS: FantasyMapSettings = {
+// Set the default settings for the simple map plugin
+export const DEFAULT_SETTINGS: SimpleMapSettings = {
 	defaultPinSize: "24px",
 	defaultZoomIncrement: 1,
 };
 
-export class FantasyMapSettingTab extends PluginSettingTab {
-	plugin: FantasyMap;
+export class SimpleMapSettingTab extends PluginSettingTab {
+	plugin: SimpleMap;
 
 	// Initialize the settings tab with a reference to the main plugin instance
-	constructor(app: App, plugin: FantasyMap) {
+	constructor(app: App, plugin: SimpleMap) {
 		super(app, plugin);
 		this.plugin = plugin;
 	}
-	
+
 	display(): void {
 		const { containerEl } = this;
 		containerEl.empty();
-		
+
 		// Create a setting for the default pin size with validation
 		new Setting(containerEl)
 			.setName("Default pin size")
@@ -89,10 +89,10 @@ export class FantasyMapSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName("Template code block")
 			.setDesc(
-				"Copy this into a note to start a fantasy map block. Use 'help' or '-h' to get helpful messages and usage instructions."
+				"Copy this into a note to start a simple map block. Use 'help' or '-h' to get helpful messages and usage instructions."
 			)
 			.addTextArea((text) => {
-				text.setValue(fantasyMapCodeBlockCopyToClipboardString);
+				text.setValue(simpleMapCodeBlockCopyToClipboardString);
 				text.setDisabled(true);
 				text.inputEl.rows = 12;
 				text.inputEl.setCssStyles({
@@ -104,9 +104,9 @@ export class FantasyMapSettingTab extends PluginSettingTab {
 				button.setButtonText("Copy").setCta().onClick(async () => {
 					try {
 						await navigator.clipboard.writeText(
-							fantasyMapCodeBlockCopyToClipboardString
+							simpleMapCodeBlockCopyToClipboardString
 						);
-						new Notice("Fantasy map block copied");
+						new Notice("Simple map block copied");
 					} catch (e) {
 						console.error(e);
 						new Notice("Failed to copy block");
@@ -119,7 +119,7 @@ export class FantasyMapSettingTab extends PluginSettingTab {
 			.setName("Template note front matter")
 			.setDesc("Copy this into a note to pin a note to your map.")
 			.addTextArea((text) => {
-				text.setValue(fantasyMapFrontMatterCopyToClipboardString);
+				text.setValue(simpleMapFrontMatterCopyToClipboardString);
 				text.setDisabled(true);
 				text.inputEl.rows = 11;
 				text.inputEl.setCssStyles({
@@ -131,9 +131,9 @@ export class FantasyMapSettingTab extends PluginSettingTab {
 				button.setButtonText("Copy").setCta().onClick(async () => {
 					try {
 						await navigator.clipboard.writeText(
-							fantasyMapFrontMatterCopyToClipboardString
+							simpleMapFrontMatterCopyToClipboardString
 						);
-						new Notice("Fantasy map front matter copied.");
+						new Notice("Simple map front matter copied.");
 					} catch (e) {
 						console.error(e);
 						new Notice("Failed to copy block.");

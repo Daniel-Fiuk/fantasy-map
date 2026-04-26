@@ -1,6 +1,6 @@
 {
-	"id": "fantasy-map",
-	"name": "Fantasy Map",
+	"id": "simple-map",
+	"name": "Simple Map",
 	"version": "1.0.0",
 	"minAppVersion": "1.12.7",
 	"description": "Upload your own maps and plant pins on important locations, each linking back to your notes.",

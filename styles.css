@@ -1,7 +1,7 @@
 /*#region Containers and Wrappers*/
 
 /* Used to contain the maps window in the note. */
-.fantasy-map-container {
+.sm-container {
 	position: relative;
 	width: 100%;
 	overflow: hidden;
@@ -9,7 +9,7 @@
 }
 
 /* Used to contain the maps elements. */
-.fantasy-map-wrapper {
+.sm-wrapper {
 	position: relative;
 	width: 100%;
 	height: 100%;
@@ -19,7 +19,7 @@
 /*#region Tiles and Backgrounds*/
 
 /* Used for covering seams between tiles. */
-.fantasy-map-background {
+.sm-background {
 	position: absolute;
 	inset: 0;
 	width: 100%;
@@ -31,7 +31,7 @@
 }
 
 /* Used to contain tile elements. */
-.fantasy-map-tiles {
+.sm-tiles {
 	position: absolute;
 	inset: 0;
 	transform-origin: top left;
@@ -39,7 +39,7 @@
 }
 
 /* Used to desplay map images with the highest possible quality. */
-.fm-tile {
+.sm-tile {
 	position: absolute;
 	width: 100%;
 	height: 100%;
@@ -51,10 +51,10 @@
 /*#endregion*/
 
 /* Prevents users from selecting tile images while dragging, while setting the cursor's grab state. */
-.fantasy-map-container,
-.fantasy-map-background,
-.fantasy-map-tiles,
-.fm-tile {
+.sm-container,
+.sm-background,
+.sm-tiles,
+.sm-tile {
 	user-select: none;
 	-webkit-user-select: none;
 	-moz-user-select: none;
@@ -69,10 +69,10 @@
 }
 
 /* While active, sets cursor state to grabbing. */
-.fantasy-map-container:active,
-.fantasy-map-background:active,
-.fantasy-map-tiles:active,
-.fm-tile:active {
+.sm-container:active,
+.sm-background:active,
+.sm-tiles:active,
+.sm-tile:active {
 	cursor: grabbing;
 }
 
@@ -81,7 +81,7 @@
 /*#region Toolbar*/
 
 /* Defines the toolbar style while setting it's opacity to zero when not being interacted with. */
-.fantasy-map-toolbar {
+.sm-toolbar {
 	position: absolute;
 	bottom: 5px;
 	left: 5px;
@@ -89,6 +89,7 @@
 
 	display: flex;
 	flex-direction: row;
+	flex-wrap: nowrap;
 	align-items: center;
 	gap: 5px;
 	padding: 5px;
@@ -102,29 +103,94 @@
 }
 
 /* Sets the toolbar's opacity to 1 when user interacts with the map. */
-.fantasy-map-container:hover .fantasy-map-toolbar,
-.fantasy-map-container:focus-within .fantasy-map-toolbar {
+.sm-container:hover .sm-toolbar,
+.sm-container:focus-within .sm-toolbar {
 	opacity: 1;
 }
 
 /* Sets the style for toolbar buttons. */
-.fantasy-map-toolbar button {
+.sm-toolbar button {
 	padding: 0.1rem 0.4rem;
 	font-size: 0.9rem;
 }
 
 /* Sets the style for zoom step text field on the toolbar. */
-.fantasy-map-toolbar input.fm-zoom-step {
+.sm-toolbar input.fm-zoom-step {
 	width: 4rem;
 	font-size: 0.9rem;
+}
+
+/* Search field on the toolbar with its prediction dropdown. */
+.fm-search {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+}
+
+.fm-search-input {
+	width: 10rem;
+	min-width: 0;
+	font-size: 0.9rem;
+	padding: 0.1rem 0.4rem;
+}
+
+.fm-search-suggestions {
+	position: absolute;
+	bottom: calc(100% + 4px);
+	left: 0;
+	/* Grow to fit the widest suggestion (note title + match metadata) but never wider than the map container minus a small buffer; the max-width is set per-render via the --sm-dropdown-max-width custom property on .fm-search. */
+	width: max-content;
+	min-width: 100%;
+	max-width: var(--sm-dropdown-max-width, 100%);
+	max-height: 220px;
+	overflow-x: hidden;
+	overflow-y: auto;
+
+	background-color: var(--background-secondary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 4px;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+	z-index: 11;
+}
+
+.fm-search-suggestion {
+	display: flex;
+	align-items: baseline;
+	gap: 4px;
+	padding: 4px 6px;
+	cursor: pointer;
+	font-size: 0.85rem;
+	/* Allow the meta span to truncate with ellipsis when the dropdown hits its max-width cap. */
+	min-width: 0;
+}
+
+.fm-search-suggestion:hover {
+	background-color: var(--background-modifier-hover);
+}
+
+.fm-search-suggestion-name {
+	font-weight: 600;
+	color: var(--text-normal);
+}
+
+.fm-search-suggestion-meta {
+	color: var(--text-muted);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
 }
 
 /*#endregion*/
 
 /*#region Pins*/
 
+/* Used to hide pins filtered out by the toolbar search. Kept in the DOM so re-applying an empty search restores them instantly. */
+.sm-pin.sm-pin-hidden {
+	display: none;
+}
+
 /* Used to contain pin elements. */
-.map-pin {
+.sm-pin {
 	position: absolute;
 	width: fit-content;
 	height: fit-content;
@@ -133,15 +199,15 @@
 }
 
 /* Sets the style of pin icon container. */
-.map-pin-icon {
+.sm-pin-icon {
 	position: relative;
 	width: 24px;
 	height: auto;
 }
 
 /* Sets the styles of the pin icon images. */
-.map-pin-icon svg,
-.map-pin-icon img {
+.sm-pin-icon svg,
+.sm-pin-icon img {
 	display: block;
 	position: absolute;
 	bottom: 0;
@@ -153,24 +219,24 @@
 }
 
 /* Sets the fill color of svg pins to match the Obsidian text accent color. */
-.map-pin-icon svg {
+.sm-pin-icon svg {
 	fill: var(--text-accent);
 }
 
 /* Sets cursor to pointer on hover. */
-.map-pin-icon:hover {
+.sm-pin-icon:hover {
 	cursor: pointer;
 }
 
 /* Animates the pin icon images on pin hover. */
-.map-pin-icon:hover svg,
-.map-pin-icon:hover img {
+.sm-pin-icon:hover svg,
+.sm-pin-icon:hover img {
 	transform: translateX(-50%) translateY(-10%) scale(1.1);
 	filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.5));
 }
 
 /* On pin hover, set pin icon color to text accent hover. */
-.map-pin-icon:hover svg {
+.sm-pin-icon:hover svg {
 	fill: var(--text-accent-hover);
 }
 
@@ -179,7 +245,7 @@
 /*#region Note Previews*/
 
 /* Sets the hover container's style. */
-.fantasy-map-hover-preview {
+.sm-hover-preview {
 	position: fixed;
 	width: min(520px, calc(100vw - 24px));
 	height: fit-content;
@@ -199,14 +265,14 @@
 }
 
 /* Sets when the preview is visable. */
-.fantasy-map-hover-preview.is-visible {
+.sm-hover-preview.is-visible {
 	opacity: 1;
 	pointer-events: auto;
 	transform: translateY(0);
 }
 
 /* Sets the header element style. */
-.fm-hover-header {
+.sm-hover-header {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
@@ -214,22 +280,28 @@
 	gap: 8px;
 }
 
-/* Sets the header title text style. */
-.fantasy-map-hover-preview .fm-hover-title {
+/* Sets the header title text style — H1-sized link in the preview header, matching Obsidian's heading variables. The coordinates row uses its own selectors and is unaffected. */
+.sm-hover-preview a.sm-hover-title {
 	display: inline-block;
 	margin: 0;
 	font-size: var(--h1-size);
-	font-weight: var(--h3-weight, 700);
+	font-weight: var(--h1-weight, 700);
+	line-height: var(--h1-line-height, 1.2);
 	text-decoration: none;
 }
 
-/* Sets preview internal link styles. */
-.fantasy-map-hover-preview a.internal-link {
+/* Sets preview internal link styles. Scoped to body content so the H1-sized title link in the header keeps its clean, undecorated heading look. */
+.sm-hover-preview .sm-hover-content a.internal-link {
+	text-decoration: underline;
+}
+
+/* Underline the title only on hover so it still reads as interactive without competing with H1 heading style at rest. */
+.sm-hover-preview a.sm-hover-title:hover {
 	text-decoration: underline;
 }
 
 /* Sets the style of preview content. */
-.fm-hover-content {
+.sm-hover-content {
 	max-height: 260px;
 	overflow-y: auto;
 	font-size: 0.9rem;
@@ -238,23 +310,23 @@
 }
 
 /* Sets the style of image, video, and embeded content. */
-.fantasy-map-hover-preview .fm-hover-content img,
-.fantasy-map-hover-preview .fm-hover-content svg,
-.fantasy-map-hover-preview .fm-hover-content video,
-.fantasy-map-hover-preview .fm-hover-content .internal-embed img {
+.sm-hover-preview .sm-hover-content img,
+.sm-hover-preview .sm-hover-content svg,
+.sm-hover-preview .sm-hover-content video,
+.sm-hover-preview .sm-hover-content .internal-embed img {
 	display: block;
 	max-width: 100%;
 	height: auto;
 }
 
-.fantasy-map-hover-preview .fm-hover-content .internal-embed,
-.fantasy-map-hover-preview .fm-hover-content .image-embed {
+.sm-hover-preview .sm-hover-content .internal-embed,
+.sm-hover-preview .sm-hover-content .image-embed {
 	max-width: 100%;
 	overflow: hidden;
 }
 
 /* Sets text overflow for preview content. */
-.fantasy-map-hover-preview .fm-hover-content p {
+.sm-hover-preview .sm-hover-content p {
 	overflow-wrap: anywhere;
 }
 

@@ -6,7 +6,7 @@ import {
 	normalizePath,
 	TFile,
 } from "obsidian";
-import { FantasyMapParams } from "./paramaters";
+import { SimpleMapParams } from "./paramaters";
 import {
 	showCustomPreview,
 	hideCustomPreview,
@@ -32,13 +32,30 @@ interface FormattedPosition {
 	top: string;
 }
 
+// Describes which property in a note matched the active search query, used so the preview can show the user *why* a pin is currently visible.
+export interface PinMatchInfo {
+	property: string;
+	value: string;
+}
+
 export interface Pin {
 	note: TFile;
 	element: HTMLElement;
 	location: Location;
+	// Aggregated, lower-cased text snippets indexed by property name. Built once at pin creation so search is cheap.
+	searchIndex: { property: string; rawValue: string; haystack: string }[];
+	matchInfo: PinMatchInfo | null;
 }
 
-// Interface defining the contract for the PinInteractionController, which manages pin interactions on the fantasy map.
+// Search-related types exposed for the toolbar wiring.
+export interface PinSearchSuggestion {
+	pin: Pin;
+	label: string;
+	property: string;
+	value: string;
+}
+
+// Interface defining the contract for the PinInteractionController, which manages pin interactions on the simple map.
 export interface PinInteractionController {
 	init(): Promise<void>;
 	updatePinPositions(
@@ -48,6 +65,9 @@ export interface PinInteractionController {
 		tileHeight: number
 	): void;
 	clearHoverDelay(): void;
+	applySearch(query: string): void;
+	getSuggestions(query: string, limit?: number): PinSearchSuggestion[];
+	getPins(): Pin[];
 	destroy(): void;
 }
 
@@ -56,7 +76,7 @@ interface PinInteractionOptions {
 	app: App;
 	component: Component;
 	wrapper: HTMLElement;
-	parameters: FantasyMapParams;
+	parameters: SimpleMapParams;
 	ctx: MarkdownPostProcessorContext;
 	setMapPanningEnabled: (enabled: boolean) => void;
 }
@@ -72,7 +92,7 @@ class PinInteractionManager implements PinInteractionController {
 	private readonly app: App;
 	private readonly component: Component;
 	private readonly wrapper: HTMLElement;
-	private readonly parameters: FantasyMapParams;
+	private readonly parameters: SimpleMapParams;
 	private readonly ctx: MarkdownPostProcessorContext;
 	private readonly setMapPanningEnabled: (enabled: boolean) => void;
 
@@ -126,7 +146,7 @@ class PinInteractionManager implements PinInteractionController {
 
 	// Handles the logic for pointer release on the map wrapper, including updating pin location or opening the note.
 	private async handleWrapperPointerUp(e: PointerEvent): Promise<void> {
-		
+
 		// If no pin is currently selected, there's nothing to do on pointer release.
 		if (!this.selectedPin) return;
 		const selectedPin = this.selectedPin;
@@ -151,11 +171,11 @@ class PinInteractionManager implements PinInteractionController {
 			await this.app.fileManager.processFrontMatter(
 				selectedPin.note,
 				(frontmatter: FrontMatterCache) => {
-					frontmatter["fm-location"] = this.formatLocation(selectedPin.location);
+					frontmatter["sm-location"] = this.formatLocation(selectedPin.location);
 				}
 			);
 		} else {
-			
+
 			// If the pin was not dragged, treat this as a click and open the associated note in Obsidian, suppressing the preview to avoid conflicts.
 			this.suppressPreview(200);
 			destroyCustomPreview();
@@ -210,7 +230,7 @@ class PinInteractionManager implements PinInteractionController {
 
 	// Initializes the pin interaction manager by loading pins from notes and setting up event listeners on the map wrapper.
 	async init(): Promise<void> {
-		
+
 		// If the latitude or longitude range parameters are not defined, there's no valid area to place pins, so we can skip initialization.
 		if (
 			this.parameters.latitudeRange == null ||
@@ -253,7 +273,7 @@ class PinInteractionManager implements PinInteractionController {
 		tileWidth: number,
 		tileHeight: number
 	): void {
-		
+
 		// Update the current map dimensions and offsets, which will be used for calculating the new positions of the pins.
 		this.currentMap.width = tileWidth;
 		this.currentMap.height = tileHeight;
@@ -281,9 +301,119 @@ class PinInteractionManager implements PinInteractionController {
 		}
 	}
 
+	// Returns the live pin list. Used by the toolbar's search controller for things like centering the map on a chosen suggestion.
+	getPins(): Pin[] {
+		return this.pins;
+	}
+
+	// Apply a search query: hides pins that don't match and records, for the ones that do, which property triggered the match so the preview can surface it.
+	applySearch(query: string): void {
+		const ast = parseSearchQuery(query);
+
+		for (const pin of this.pins) {
+			if (!ast) {
+				pin.matchInfo = null;
+				pin.element.removeClass("sm-pin-hidden");
+				continue;
+			}
+
+			const match = evaluateSearch(ast, pin);
+			if (match) {
+				pin.matchInfo = match;
+				pin.element.removeClass("sm-pin-hidden");
+			} else {
+				pin.matchInfo = null;
+				pin.element.addClass("sm-pin-hidden");
+			}
+		}
+	}
+
+	// Generate suggestion items for the autocomplete dropdown. Each suggestion identifies a pin and the specific property/value snippet that matched.
+	getSuggestions(query: string, limit = 8): PinSearchSuggestion[] {
+		const ast = parseSearchQuery(query);
+		if (!ast) return [];
+
+		const results: PinSearchSuggestion[] = [];
+		for (const pin of this.pins) {
+			const match = evaluateSearch(ast, pin);
+			if (!match) continue;
+			results.push({
+				pin,
+				label: pin.note.basename,
+				property: match.property,
+				value: match.value,
+			});
+			if (results.length >= limit) break;
+		}
+		return results;
+	}
+
+	// Build a flat, lower-cased searchable representation of a note: name, aliases, tags, and every other frontmatter property. Stored so applySearch and getSuggestions can run synchronously over many pins without re-reading the metadata cache each keystroke.
+	private buildSearchIndex(
+		note: TFile,
+		frontMatter: FrontMatterCache
+	): { property: string; rawValue: string; haystack: string }[] {
+		const entries: { property: string; rawValue: string; haystack: string }[] = [];
+
+		const push = (property: string, value: unknown) => {
+			if (value == null) return;
+			const rawValue = Array.isArray(value)
+				? value.map((v) => String(v)).join(", ")
+				: String(value);
+			if (!rawValue.length) return;
+			entries.push({
+				property,
+				rawValue,
+				haystack: rawValue.toLowerCase(),
+			});
+		};
+
+		push("name", note.basename);
+
+		// Aliases can be a string or an array depending on how the user wrote them. Normalize each one as its own indexable entry so a search can hit a single alias precisely.
+		const aliases = frontMatter.aliases ?? frontMatter.alias;
+		if (Array.isArray(aliases)) {
+			for (const a of aliases) push("alias", a);
+		} else if (aliases != null) {
+			push("alias", aliases);
+		}
+
+		// Tags can come from frontmatter as `tag`/`tags` (string or array, possibly with leading `#`).
+		const tags = frontMatter.tags ?? frontMatter.tag;
+		const pushTag = (t: unknown) => {
+			if (t == null) return;
+			const stripped = String(t).replace(/^#/, "");
+			push("tag", stripped);
+		};
+		if (Array.isArray(tags)) {
+			for (const t of tags) pushTag(t);
+		} else if (tags != null) {
+			// Frontmatter tags written as a single string can be comma- or space-separated.
+			for (const t of String(tags).split(/[,\s]+/)) pushTag(t);
+		}
+
+		// Every other frontmatter key, except the ones we already indexed and Obsidian/plugin internals.
+		const skip = new Set([
+			"aliases",
+			"alias",
+			"tags",
+			"tag",
+			"position",
+			"sm-location",
+			"sm-id",
+			"sm-pin-icon",
+		]);
+		for (const key of Object.keys(frontMatter)) {
+			if (skip.has(key)) continue;
+			push(key, (frontMatter as Record<string, unknown>)[key]);
+		}
+
+		return entries;
+	}
+
 	// Destroys the pin interaction manager by removing event listeners, clearing pins from the map, and resetting state, allowing for cleanup when the map is no longer needed or is being reinitialized.
 	destroy(): void {
-		
+
 		// Clear any existing hover delay to prevent the preview from lingering after the manager is destroyed.
 		this.clearHoverDelay();
 		this.wrapper.removeEventListener("pointermove", this.onWrapperPointerMove);
@@ -305,20 +435,20 @@ class PinInteractionManager implements PinInteractionController {
 
 	// Creates a pin for a given note if it has valid location front matter, adding it to the map and setting up its interactions based on the note's metadata and the plugin's parameters.
 	private async createPin(note: TFile): Promise<void> {
-		
+
 		// Retrieve the front matter cache for the note to access its metadata, and check for the presence of the required location field. If the location field is missing, we cannot create a pin for this note.
 		const cache = this.app.metadataCache.getFileCache(note);
 		const frontMatter = cache?.frontmatter;
 		if (!frontMatter) return;
 
 		// Check for the presence of the location field in the front matter, which is required to create a pin. If it's missing, we cannot proceed with creating a pin for this note.
-		const frontMatterLocation = frontMatter["fm-location"] as string;
+		const frontMatterLocation = frontMatter["sm-location"] as string;
 		if (frontMatterLocation === undefined) return;
 
 		// If the plugin parameters specify a list of allowed map IDs, check if the note's front matter contains a matching ID. If it doesn't match, we should not create a pin for this note.
 		const mapIDs = this.parameters.mapIDs ?? [];
 		if (mapIDs.length > 0 && mapIDs[0] !== "") {
-			const mapId = frontMatter["fm-id"] as string;
+			const mapId = frontMatter["sm-id"] as string;
 			if (mapId == null || !mapIDs.includes(String(mapId))) return;
 		}
 
@@ -335,7 +465,7 @@ class PinInteractionManager implements PinInteractionController {
 		) return;
 
 		// Create a new pin element on the map for this note, positioning it based on the parsed location and applying the appropriate icon and size based on the note's front matter and plugin parameters.
-		const pinElement = this.wrapper.createEl("div", { cls: "map-pin" });
+		const pinElement = this.wrapper.createEl("div", { cls: "sm-pin" });
 
 		// Convert the location to pixel coordinates and format them for CSS styling, then apply the styles to position the pin element on the map.
 		const formattedPx = this.formatPx(this.locationToPx(location));
@@ -345,10 +475,10 @@ class PinInteractionManager implements PinInteractionController {
 		});
 
 		// Create a child element within the pin element to hold the icon, and determine which icon to use based on the note's front matter. If a custom icon is specified and can be resolved, use it; otherwise, fall back to the default pin icon.
-		const pinIconEl = pinElement.createEl("div", { cls: "map-pin-icon" });
+		const pinIconEl = pinElement.createEl("div", { cls: "sm-pin-icon" });
 
 		// Attempt to resolve a custom pin icon file based on the note's front matter, using the provided value to find a linked file or a file by name in the vault. If a valid file is found, it will be used as the pin icon.
-		const pinIconValue: unknown = frontMatter["fm-pin-icon"] as string;
+		const pinIconValue: unknown = frontMatter["sm-pin-icon"] as string;
 		const pinFile = this.resolvePinIconFile(
 			this.app,
 			pinIconValue,
@@ -361,7 +491,7 @@ class PinInteractionManager implements PinInteractionController {
 		// If a custom pin file was resolved, check its extension to determine how to display it. If it's an SVG, read its content and add padding to the viewBox before displaying it. If it's a raster image, create an img element with the appropriate source URL.
 		if (pinFile) {
 			if (pinFile.extension.toLowerCase() === "svg") {
-				
+
 				// For SVG icons, read the file content, add padding to the viewBox for better display, and parse it into an SVG document to be used as the pin icon.
 				const customPinIcon = this.addSvgViewBoxPadding(
 					await this.app.vault.cachedRead(pinFile),
@@ -373,7 +503,7 @@ class PinInteractionManager implements PinInteractionController {
 				);
 				pinIconEl.replaceChildren(customSVGDoc.documentElement);
 			} else {
-				
+
 				// For raster images, get the resource path for the file and create an img element to display it as the pin icon.
 				const url = this.app.vault.getResourcePath(pinFile);
 				pinIconEl.createEl("img", {
@@ -384,7 +514,7 @@ class PinInteractionManager implements PinInteractionController {
 				});
 			}
 
-		// If no custom pin file was resolved, use the default pin icon by parsing the embedded SVG content and adding padding to the viewBox for better display.
+			// If no custom pin file was resolved, use the default pin icon by parsing the embedded SVG content and adding padding to the viewBox for better display.
 		} else {
 			const defaultPaddedSVG = this.addSvgViewBoxPadding(defaultPinIcon, 2);
 			const defaultSVGDoc = parser.parseFromString(
@@ -404,8 +534,8 @@ class PinInteractionManager implements PinInteractionController {
 			pinIconEl.setCssStyles({
 				width: `${Number(match[1]) * 0.01 * this.currentMap.width}px`,
 			});
-			
-		// If the pin size is not a percentage, apply it directly as a CSS width value, allowing for fixed sizes using units like pixels or rem.
+
+			// If the pin size is not a percentage, apply it directly as a CSS width value, allowing for fixed sizes using units like pixels or rem.
 		} else {
 			pinIconEl.setCssStyles({
 				width: this.parameters.pinSize,
@@ -417,6 +547,8 @@ class PinInteractionManager implements PinInteractionController {
 			note,
 			element: pinElement,
 			location,
+			searchIndex: this.buildSearchIndex(note, frontMatter),
+			matchInfo: null,
 		};
 
 		// Initialize the interactions for the new pin, setting up event listeners for hover and click events to show previews and allow dragging. Then add the new pin to the pins array for management.
@@ -426,7 +558,7 @@ class PinInteractionManager implements PinInteractionController {
 
 	// Initializes the interactions for a given pin, setting up event listeners for pointer enter, leave, and down events to manage hover previews and dragging behavior based on the user's interactions with the pin element.
 	private initPinActions(pin: Pin): void {
-		
+
 		// When the pointer enters the pin element, check if a pin is already selected or if the preview should be suppressed. If not, start a hover delay to show the custom preview for this pin after a short delay.
 		pin.element.addEventListener("pointerenter", (e) => {
 			if (this.selectedPin || this.shouldSuppressPreview()) return;
@@ -487,7 +619,7 @@ class PinInteractionManager implements PinInteractionController {
 		value: unknown,
 		sourcePath: string
 	): TFile | null {
-		
+
 		// If the value is not a string, we cannot resolve it to a file, so return null.
 		if (typeof value !== "string") return null;
 
@@ -510,7 +642,7 @@ class PinInteractionManager implements PinInteractionController {
 		// If the value cannot be resolved as a linked file or a direct path, attempt to find a file in the vault with a matching name or basename, checking for supported image extensions. This allows users to specify icons by name, which can be convenient if they have a small number of files in the vault.
 		const files = app.vault.getFiles();
 		const lower = normalized.toLowerCase();
-		
+
 		// Define a set of supported image file extensions for pin icons, which will be used to filter potential matches when resolving a file by name. This ensures that only valid image files are considered for use as pin icons.
 		const supportedExts = new Set(["svg", "png", "jpg", "jpeg", "webp", "gif"]);
 
@@ -534,7 +666,7 @@ class PinInteractionManager implements PinInteractionController {
 		const svgMatch = basenameMatches.find(
 			(f) => f.extension.toLowerCase() === "svg"
 		);
-		
+
 		// If an SVG match is found among the basename matches, return it. Otherwise, return the first match in the list of basename matches, or null if there are no matches. This allows for a reasonable fallback when multiple files share the same basename, prioritizing SVGs for their advantages as pin icons.
 		if (svgMatch) return svgMatch ?? null;
 
@@ -545,7 +677,7 @@ class PinInteractionManager implements PinInteractionController {
 	// Adds padding to the viewBox of an SVG string by parsing the viewBox attribute and adjusting its values to create a larger viewBox that includes the specified padding. This can help improve the appearance of pin icons by ensuring they have some space around them when rendered on the map.
 	private addSvgViewBoxPadding(svg: string, pad: number): string {
 		return svg.replace(/viewBox="([^"]+)"/, (_match, vb: string) => {
-			
+
 			// Parse the viewBox values into numbers and validate that they are in the correct format. If the viewBox does not have exactly four numeric values, return it unchanged to avoid breaking the SVG.
 			const parts = vb.trim().split(/\s+/).map((part) => Number(part));
 			if (
@@ -574,7 +706,7 @@ class PinInteractionManager implements PinInteractionController {
 
 	// Parses a formatted location string from front matter into a Location object, using a regular expression to extract the latitude and longitude values. If the string is not in the correct format or contains invalid numbers, the function returns null to indicate that the location could not be parsed.
 	private parseFormattedLocation(formattedLocation: string): Location | null {
-		
+
 		// Use a regular expression to match the expected format of the location string, which should be in the form of "(lat, lng)" with optional whitespace and support for decimal numbers. If the string does not match this format, return null.
 		const match = formattedLocation.match(
 			/\(\s*([+-]?\d+(?:\.\d+)?)\s*,\s*([+-]?\d+(?:\.\d+)?)\s*\)/
@@ -658,4 +790,149 @@ class PinInteractionManager implements PinInteractionController {
 	private wrapValue(n: number, m: number): number {
 		return ((n % m) + m) % m;
 	}
+}
+
+// Search query AST. Built once per query string and then evaluated against each pin. Adjacent terms with no operator default to AND, matching the way most search UIs behave.
+type SearchTerm = { kind: "term"; text: string };
+type SearchAnd = { kind: "and"; children: SearchNode[] };
+type SearchOr = { kind: "or"; children: SearchNode[] };
+type SearchNode = SearchTerm | SearchAnd | SearchOr;
+
+// Tokenize the raw query string. Quoted runs ("...") are a single term that may contain spaces and operator-like characters; bare runs split on whitespace; `&&`/`and`/`||`/`or` become operator tokens.
+type Token =
+	| { type: "term"; value: string }
+	| { type: "and" }
+	| { type: "or" };
+
+function tokenizeSearchQuery(input: string): Token[] {
+	const tokens: Token[] = [];
+	let i = 0;
+
+	while (i < input.length) {
+		const ch = input[i];
+
+		if (ch === " " || ch === "\t" || ch === "\n") {
+			i++;
+			continue;
+		}
+
+		if (ch === '"') {
+			let j = i + 1;
+			let value = "";
+			while (j < input.length && input[j] !== '"') {
+				value += input[j];
+				j++;
+			}
+			if (value.length > 0) tokens.push({ type: "term", value });
+			i = j < input.length ? j + 1 : j;
+			continue;
+		}
+
+		if (input.startsWith("&&", i)) {
+			tokens.push({ type: "and" });
+			i += 2;
+			continue;
+		}
+
+		if (input.startsWith("||", i)) {
+			tokens.push({ type: "or" });
+			i += 2;
+			continue;
+		}
+
+		// Bare word: read until whitespace or quote. We then check if the bare word itself is an `and`/`or` keyword.
+		let j = i;
+		while (
+			j < input.length &&
+			input[j] !== " " &&
+			input[j] !== "\t" &&
+			input[j] !== "\n" &&
+			input[j] !== '"'
+			) {
+			j++;
+		}
+		const word = input.slice(i, j);
+		const lower = word.toLowerCase();
+		if (lower === "and") {
+			tokens.push({ type: "and" });
+		} else if (lower === "or") {
+			tokens.push({ type: "or" });
+		} else if (word.length > 0) {
+			tokens.push({ type: "term", value: word });
+		}
+		i = j;
+	}
+
+	return tokens;
+}
+
+// Convert tokens into an AST with OR as the lowest-precedence operator and adjacent terms binding implicitly with AND. Returns null if the query is empty so callers can short-circuit to "no filter".
+export function parseSearchQuery(input: string): SearchNode | null {
+	const tokens = tokenizeSearchQuery(input);
+	if (tokens.length === 0) return null;
+
+	// Group tokens by OR. Within each group, every term/AND-token contributes to a single AND node.
+	const orGroups: SearchNode[][] = [[]];
+	let lastWasOperator = true;
+	for (const tok of tokens) {
+		if (tok.type === "or") {
+			orGroups.push([]);
+			lastWasOperator = true;
+			continue;
+		}
+		if (tok.type === "and") {
+			lastWasOperator = true;
+			continue;
+		}
+		// term
+		orGroups[orGroups.length - 1].push({ kind: "term", text: tok.value });
+		lastWasOperator = false;
+	}
+
+	if (lastWasOperator && orGroups[orGroups.length - 1].length === 0) {
+		// trailing operator with nothing after it — just drop the empty group
+		orGroups.pop();
+	}
+
+	const andNodes: SearchNode[] = orGroups
+		.filter((group) => group.length > 0)
+		.map((group) =>
+			group.length === 1 ? group[0] : { kind: "and", children: group }
+		);
+
+	if (andNodes.length === 0) return null;
+	if (andNodes.length === 1) return andNodes[0];
+	return { kind: "or", children: andNodes };
+}
+
+// Evaluate an AST against a pin. Returns the first PinMatchInfo that satisfies the query (so the preview can show *which* property matched), or null if no match.
+export function evaluateSearch(node: SearchNode, pin: Pin): PinMatchInfo | null {
+	if (node.kind === "term") {
+		const needle = node.text.toLowerCase();
+		if (!needle) return null;
+		for (const entry of pin.searchIndex) {
+			if (entry.haystack.includes(needle)) {
+				return { property: entry.property, value: entry.rawValue };
+			}
+		}
+		return null;
+	}
+
+	if (node.kind === "and") {
+		// Every child must match. Return the most specific (last) match so the preview surfaces the most informative property the query touched.
+		let last: PinMatchInfo | null = null;
+		for (const child of node.children) {
+			const m = evaluateSearch(child, pin);
+			if (!m) return null;
+			last = m;
+		}
+		return last;
+	}
+
+	// or
+	for (const child of node.children) {
+		const m = evaluateSearch(child, pin);
+		if (m) return m;
+	}
+	return null;
 }
