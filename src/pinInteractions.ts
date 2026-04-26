@@ -355,7 +355,7 @@ class PinInteractionManager implements PinInteractionController {
 	): { property: string; rawValue: string; haystack: string }[] {
 		const entries: { property: string; rawValue: string; haystack: string }[] = [];
 
-		const push = (property: string, value: unknown) => {
+		const push = (property: string, value: string) => {
 			if (value == null) return;
 			const rawValue = Array.isArray(value)
 				? value.map((v) => String(v)).join(", ")
