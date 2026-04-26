@@ -405,7 +405,11 @@ class PinInteractionManager implements PinInteractionController {
 		]);
 		for (const key of Object.keys(frontMatter)) {
 			if (skip.has(key)) continue;
-			push(key, (frontMatter as Record<string, unknown>)[key]);
+			const value = (frontMatter as Record<string, unknown>)[key];
+
+			if (typeof value === "string") {
+				push(key, value);
+			}
 		}
 
 		return entries;
