@@ -370,27 +370,60 @@ class PinInteractionManager implements PinInteractionController {
 
 		push("name", note.basename);
 
-		// Aliases can be a string or an array depending on how the user wrote them. Normalize each one as its own indexable entry so a search can hit a single alias precisely.
-		const aliases: string | string[] = frontMatter.aliases ?? frontMatter.alias;
-		if (Array.isArray(aliases)) {
-			for (const a of aliases) push("alias", a);
-		} else if (aliases != null) {
+		const aliases = getFrontmatterValue(frontMatter, "aliases", "alias");
+
+		if (typeof aliases === "string") {
 			push("alias", aliases);
+		} else if (Array.isArray(aliases)) {
+			for (const a of aliases) {
+				if (typeof a === "string") {
+					push("alias", a);
+				}
+			}
 		}
 
-		// Tags can come from frontmatter as `tag`/`tags` (string or array, possibly with leading `#`).
-		const tags: string | string[] = frontMatter.tags ?? frontMatter.tag;
+		const rawTags = getFrontmatterValue(frontMatter, "tags", "tag");
+
 		const pushTag = (t: string) => {
-			if (t == null) return;
 			const stripped = t.replace(/^#/, "");
-			push("tag", stripped);
+			if (stripped.length > 0) {
+				push("tag", stripped);
+			}
 		};
-		
-		if (Array.isArray(tags)) {
-			for (const t of tags) pushTag(t);
-		} else if (tags != null) {
-			// Frontmatter tags written as a single string can be comma- or space-separated.
-			for (const t of String(tags).split(/[,\s]+/)) pushTag(t);
+
+		if (typeof rawTags === "string") {
+			for (const t of rawTags.split(/[,\s]+/)) {
+				pushTag(t);
+			}
+		} else if (Array.isArray(rawTags)) {
+			for (const t of rawTags) {
+				if (typeof t === "string") {
+					pushTag(t);
+				}
+			}
+		}
+
+		function getFrontmatterValue(
+			frontMatter: unknown,
+			...keys: string[]
+		): unknown {
+			if (
+				frontMatter == null ||
+				typeof frontMatter !== "object"
+			) {
+				return undefined;
+			}
+
+			const record = frontMatter as Record<string, unknown>;
+
+			for (const key of keys) {
+				const value = record[key];
+				if (value != null) {
+					return value;
+				}
+			}
+
+			return undefined;
 		}
 
 		// Every other frontmatter key, except the ones we already indexed and Obsidian/plugin internals.
