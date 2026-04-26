@@ -263,16 +263,16 @@ export default class SimpleMap extends Plugin {
 			const renderSuggestions = (query: string) => {
 				searchSuggestions.empty();
 				if (!query.trim()) {
-					searchSuggestions.style.display = "none";
+					searchSuggestions.style.setCssProps({ display: "none" });
 					return;
 				}
 				const items = pinController.getSuggestions(query, 8);
 				if (items.length === 0) {
-					searchSuggestions.style.display = "none";
+					searchSuggestions.style.setCssProps({ display: "none" });
 					return;
 				}
 				updateDropdownMaxWidth();
-				searchSuggestions.style.display = "";
+				searchSuggestions.style.setCssProps({ display: "" });
 				for (const item of items) {
 					const row = searchSuggestions.createEl("div", {
 						cls: "sm-search-suggestion",
@@ -299,7 +299,7 @@ export default class SimpleMap extends Plugin {
 							item.pin.location.lng
 						);
 						searchSuggestions.empty();
-						searchSuggestions.style.display = "none";
+						searchSuggestions.style.setCssProps({ display: "none" });
 					});
 				}
 			};
@@ -317,7 +317,7 @@ export default class SimpleMap extends Plugin {
 			searchInput.addEventListener("blur", () => {
 				// Defer hiding so a click on a suggestion can fire its mousedown handler first.
 				window.setTimeout(() => {
-					searchSuggestions.style.display = "none";
+					searchSuggestions.style.setCssProps({ display: "none" });
 				}, 150);
 			});
 
