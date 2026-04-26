@@ -871,26 +871,30 @@ export function parseSearchQuery(input: string): SearchNode | null {
 	const tokens = tokenizeSearchQuery(input);
 	if (tokens.length === 0) return null;
 
-	// Group tokens by OR. Within each group, every term/AND-token contributes to a single AND node.
 	const orGroups: SearchNode[][] = [[]];
 	let lastWasOperator = true;
+
 	for (const tok of tokens) {
 		if (tok.type === "or") {
 			orGroups.push([]);
 			lastWasOperator = true;
 			continue;
 		}
+
 		if (tok.type === "and") {
 			lastWasOperator = true;
 			continue;
 		}
-		// term
-		orGroups[orGroups.length - 1].push({ kind: "term", text: tok.value });
+
+		const lastGroup = orGroups[orGroups.length - 1];
+		if (!lastGroup) return null; // or throw, if this should be impossible
+
+		lastGroup.push({ kind: "term", text: tok.value });
 		lastWasOperator = false;
 	}
 
-	if (lastWasOperator && orGroups[orGroups.length - 1].length === 0) {
-		// trailing operator with nothing after it — just drop the empty group
+	const lastGroup = orGroups[orGroups.length - 1];
+	if (lastWasOperator && lastGroup && lastGroup.length === 0) {
 		orGroups.pop();
 	}
 
