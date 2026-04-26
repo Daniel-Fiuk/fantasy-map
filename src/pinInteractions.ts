@@ -371,7 +371,7 @@ class PinInteractionManager implements PinInteractionController {
 		push("name", note.basename);
 
 		// Aliases can be a string or an array depending on how the user wrote them. Normalize each one as its own indexable entry so a search can hit a single alias precisely.
-		const aliases = frontMatter.aliases ?? frontMatter.alias;
+		const aliases: string | string[] = frontMatter.aliases ?? frontMatter.alias;
 		if (Array.isArray(aliases)) {
 			for (const a of aliases) push("alias", a);
 		} else if (aliases != null) {
@@ -379,12 +379,13 @@ class PinInteractionManager implements PinInteractionController {
 		}
 
 		// Tags can come from frontmatter as `tag`/`tags` (string or array, possibly with leading `#`).
-		const tags = frontMatter.tags ?? frontMatter.tag;
-		const pushTag = (t: unknown) => {
+		const tags: string | string[] = frontMatter.tags ?? frontMatter.tag;
+		const pushTag = (t: string) => {
 			if (t == null) return;
-			const stripped = String(t).replace(/^#/, "");
+			const stripped = t.replace(/^#/, "");
 			push("tag", stripped);
 		};
+		
 		if (Array.isArray(tags)) {
 			for (const t of tags) pushTag(t);
 		} else if (tags != null) {
