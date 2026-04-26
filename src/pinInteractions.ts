@@ -76,7 +76,7 @@ interface PinInteractionOptions {
 	app: App;
 	component: Component;
 	wrapper: HTMLElement;
-	parameters: SimpleMapParams;
+	parameters: SimpleMapParamaters;
 	ctx: MarkdownPostProcessorContext;
 	setMapPanningEnabled: (enabled: boolean) => void;
 }
@@ -92,7 +92,7 @@ class PinInteractionManager implements PinInteractionController {
 	private readonly app: App;
 	private readonly component: Component;
 	private readonly wrapper: HTMLElement;
-	private readonly parameters: SimpleMapParams;
+	private readonly parameters: SimpleMapParamaters;
 	private readonly ctx: MarkdownPostProcessorContext;
 	private readonly setMapPanningEnabled: (enabled: boolean) => void;
 
@@ -885,7 +885,7 @@ export function parseSearchQuery(input: string): SearchNode | null {
 			continue;
 		}
 		// term
-		orGroups[orGroups.length - 1].push({ kind: "term", text: tok.value });
+		orGroups[orGroups.length - 1].push({ kind: "term", text: tok.value ?? null });
 		lastWasOperator = false;
 	}
 
@@ -898,10 +898,10 @@ export function parseSearchQuery(input: string): SearchNode | null {
 		.filter((group) => group.length > 0)
 		.map((group) =>
 			group.length === 1 ? group[0] : { kind: "and", children: group }
-		) ?? null;
+		) ?? { };
 
 	if (andNodes ===  null || andNodes.length === 0) return null;
-	if (andNodes.length === 1) return andNodes[0];
+	if (andNodes.length === 1) return andNodes[0] ?? null;
 	return { kind: "or", children: andNodes };
 }
 
