@@ -142,3 +142,4 @@ export class SimpleMapSettingTab extends PluginSettingTab {
 			});
 	}
 }
+ 

@@ -6,7 +6,7 @@ import {
 	Notice,
 } from "obsidian";
 
-import { SimleMapSettings } from "./settings";
+import { SimpleMapSettings } from "./settings";
 
 // Interface defining the parameters for the simple map
 export interface SimpleMapParams {
@@ -199,12 +199,12 @@ export function parseSimpleMapParams(
 
 	// If no lines are provided, show all help messages
 	if (lines.length === 0) {
-		void fantasyMapHelpMessage(
+		void simpleMapHelpMessage(
 			app,
 			element,
 			compileHelpMessages(
 				allHelpMessages(settings),
-				"##### Available fantasy-map parameters:"
+				"##### Available simple-map parameters:"
 			),
 			true,
 			ctx.sourcePath,
@@ -224,7 +224,7 @@ export function parseSimpleMapParams(
 		// Validate that the line contains a colon to separate key and value
 		if (!line.includes(":")) {
 			addHelpMessage(
-				`Fantasy Map Error: Invalid parameter format: "${line}"! Each parameter should be in the format "key: value".`
+				`Simple Map Error: Invalid parameter format: "${line}"! Each parameter should be in the format "key: value".`
 			);
 			continue;
 		}
@@ -257,7 +257,7 @@ export function parseSimpleMapParams(
 			case "map":
 				if (checkForHelp(mapHelpMessageString)) break;
 				if (value.length === 0) {
-					addHelpMessage('Fantasy Map Error: "Map" option is required!');
+					addHelpMessage('Simple Map Error: "Map" option is required!');
 				}
 				params.map = value;
 				break;
@@ -286,7 +286,7 @@ export function parseSimpleMapParams(
 
 				if (!isValidPinSize(value)) {
 					addHelpMessage(
-						"fantasy-map error: Pin size value is invalid! Examples: '24px', '1.5rem', '5%', '10vw', or '0'."
+						"simple-map error: Pin size value is invalid! Examples: '24px', '1.5rem', '5%', '10vw', or '0'."
 					);
 					break;
 				}
@@ -371,7 +371,7 @@ export function parseSimpleMapParams(
 
 			// If the key does not match any known parameter, log a warning and add a help message indicating that the parameter is unknown
 			default:
-				console.warn(`Unknown fantasy-map parameter: "${rawKey}"`);
+				console.warn(`Unknown simple-map parameter: "${rawKey}"`);
 				addHelpMessage(
 					`Unknown parameter: "${rawKey}"! Please check for typos and make sure you are using the correct parameter names.`
 				);
@@ -380,7 +380,7 @@ export function parseSimpleMapParams(
 	}
 
 	// Compile the final parameters object, using default values from the settings or hardcoded defaults if specific parameters were not provided
-	const finalParams: FantasyMapParams = {
+	const finalParams: SimpleMapParams = {
 		map: params.map ?? "",
 		mapIDs: params.mapIDs ?? [],
 		pinSize: params.pinSize && params.pinSize.length > 0 ? params.pinSize : settings.defaultPinSize,
@@ -396,17 +396,17 @@ export function parseSimpleMapParams(
 
 	// If any help messages were generated during parsing, compile them into a single message and display it to the user
 	if (helpMessages.length > 0) {
-		void fantasyMapHelpMessage(
+		void simpleMapHelpMessage(
 			app,
 			element,
-			compileHelpMessages(helpMessages, "##### Fantasy-map help messages:"),
+			compileHelpMessages(helpMessages, "##### Simple-map help messages:"),
 			true,
 			ctx.sourcePath,
 			component
 		);
 	}
 
-	// Return the final parameters object to be used for rendering the fantasy map
+	// Return the final parameters object to be used for rendering the simple map
 	return finalParams;
 }
 

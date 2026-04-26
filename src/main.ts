@@ -121,25 +121,25 @@ export default class SimpleMap extends Plugin {
 
 		// Create a toolbar with buttons for zooming in, resetting the view, and zooming out, as well as an input for adjusting the zoom increment
 		const toolbar = mapWrapper.createEl("div", { cls: "sm-toolbar" });
-		toolbar.createEl("button", { cls: "fm-zoom-in", text: "+" });
-		toolbar.createEl("button", { cls: "fm-reset", text: "Reset" });
-		toolbar.createEl("button", { cls: "fm-zoom-out", text: "-" });
+		toolbar.createEl("button", { cls: "sm-zoom-in", text: "+" });
+		toolbar.createEl("button", { cls: "sm-reset", text: "Reset" });
+		toolbar.createEl("button", { cls: "sm-zoom-out", text: "-" });
 
 		// Create an input element for adjusting the zoom increment, and set its initial value based on the parameters or settings
 		const zoomInput = toolbar.createEl("input", {
-			cls: "fm-zoom-step",
+			cls: "sm-zoom-step",
 			type: "number",
 		});
 
 		// Create the search field and its prediction dropdown. The dropdown lives inside the toolbar so it inherits the toolbar's hover/focus visibility behavior.
-		const searchWrapper = toolbar.createEl("div", { cls: "fm-search" });
+		const searchWrapper = toolbar.createEl("div", { cls: "sm-search" });
 		const searchInput = searchWrapper.createEl("input", {
-			cls: "fm-search-input",
+			cls: "sm-search-input",
 			type: "text",
 			attr: { placeholder: 'Search pins (use "quotes", && / and, || / or)' },
 		});
 		const searchSuggestions = searchWrapper.createEl("div", {
-			cls: "fm-search-suggestions",
+			cls: "sm-search-suggestions",
 		});
 		searchSuggestions.style.display = "none";
 
@@ -184,7 +184,7 @@ export default class SimpleMap extends Plugin {
 			// Loop through the number of tiles in both the X and Y directions to create the individual tile elements
 			for (let y = 0; y < tilesY; y++) {
 				for (let x = 0; x < tilesX; x++) {
-					const tile = tilesLayer.createEl("div", { cls: "fm-tile" });
+					const tile = tilesLayer.createEl("div", { cls: "sm-tile" });
 
 					tile.setCssStyles({
 						backgroundImage: `url("${mapUrl}")`,
@@ -275,10 +275,10 @@ export default class SimpleMap extends Plugin {
 				searchSuggestions.style.display = "";
 				for (const item of items) {
 					const row = searchSuggestions.createEl("div", {
-						cls: "fm-search-suggestion",
+						cls: "sm-search-suggestion",
 					});
 					row.createEl("span", {
-						cls: "fm-search-suggestion-name",
+						cls: "sm-search-suggestion-name",
 						text: item.label,
 					});
 					// Skip the meta line when the match is on the note name itself; otherwise capitalize the property label for display.
@@ -286,7 +286,7 @@ export default class SimpleMap extends Plugin {
 						const propLabel =
 							item.property.charAt(0).toUpperCase() + item.property.slice(1);
 						row.createEl("span", {
-							cls: "fm-search-suggestion-meta",
+							cls: "sm-search-suggestion-meta",
 							text: ` ${propLabel}: "${item.value}"`,
 						});
 					}
@@ -333,7 +333,7 @@ export default class SimpleMap extends Plugin {
 		function positionTiles(tilesLayerEl: HTMLElement) {
 
 			// Get all the tile elements within the tiles layer and convert the NodeList to an array for easier manipulation
-			const tiles = Array.from(tilesLayerEl.querySelectorAll(".fm-tile"));
+			const tiles = Array.from(tilesLayerEl.querySelectorAll(".sm-tile"));
 
 			// Loop through each tile element and set its CSS styles for the left and top properties based on its data attributes, effectively positioning it in the correct location within the grid
 			tiles.forEach((tile) => {

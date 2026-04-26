@@ -115,30 +115,30 @@
 }
 
 /* Sets the style for zoom step text field on the toolbar. */
-.sm-toolbar input.fm-zoom-step {
+.sm-toolbar input.sm-zoom-step {
 	width: 4rem;
 	font-size: 0.9rem;
 }
 
 /* Search field on the toolbar with its prediction dropdown. */
-.fm-search {
+.sm-search {
 	position: relative;
 	display: flex;
 	flex-direction: column;
 }
 
-.fm-search-input {
+.sm-search-input {
 	width: 10rem;
 	min-width: 0;
 	font-size: 0.9rem;
 	padding: 0.1rem 0.4rem;
 }
 
-.fm-search-suggestions {
+.sm-search-suggestions {
 	position: absolute;
 	bottom: calc(100% + 4px);
 	left: 0;
-	/* Grow to fit the widest suggestion (note title + match metadata) but never wider than the map container minus a small buffer; the max-width is set per-render via the --sm-dropdown-max-width custom property on .fm-search. */
+	/* Grow to fit the widest suggestion (note title + match metadata) but never wider than the map container minus a small buffer; the max-width is set per-render via the --sm-dropdown-max-width custom property on .sm-search. */
 	width: max-content;
 	min-width: 100%;
 	max-width: var(--sm-dropdown-max-width, 100%);
@@ -153,7 +153,7 @@
 	z-index: 11;
 }
 
-.fm-search-suggestion {
+.sm-search-suggestion {
 	display: flex;
 	align-items: baseline;
 	gap: 4px;
@@ -164,16 +164,16 @@
 	min-width: 0;
 }
 
-.fm-search-suggestion:hover {
+.sm-search-suggestion:hover {
 	background-color: var(--background-modifier-hover);
 }
 
-.fm-search-suggestion-name {
+.sm-search-suggestion-name {
 	font-weight: 600;
 	color: var(--text-normal);
 }
 
-.fm-search-suggestion-meta {
+.sm-search-suggestion-meta {
 	color: var(--text-muted);
 	white-space: nowrap;
 	overflow: hidden;

@@ -24,8 +24,8 @@ interface MapInteractionOptions {
 	bgLayer: HTMLElement;
 	tilesLayer: HTMLElement;
 	toolbar: HTMLElement;
-	parameters: FantasyMapParams;
-	settings: FantasyMapSettings;
+	parameters: SimpleMapParamaters;
+	settings: SimpleMapSettings;
 	onViewportChanged: (
 		offsetX: number,
 		offsetY: number,
@@ -48,8 +48,8 @@ class MapInteractionManager implements MapInteractionController {
 	private readonly bgLayer: HTMLElement;
 	private readonly tilesLayer: HTMLElement;
 	private readonly toolbar: HTMLElement;
-	private readonly parameters: FantasyMapParams;
-	private readonly settings: FantasyMapSettings;
+	private readonly parameters: SimpleMapParamaters;
+	private readonly settings: SimpleMapSettings;
 	private readonly onViewportChanged: MapInteractionOptions["onViewportChanged"];
 	private readonly onInteractionStart?: () => void;
 
@@ -99,7 +99,7 @@ class MapInteractionManager implements MapInteractionController {
 	private readonly onWheel = (e: WheelEvent) => {
 		e.preventDefault();
 
-		const stepInput = this.toolbar.querySelector<HTMLInputElement>(".fm-zoom-step");
+		const stepInput = this.toolbar.querySelector<HTMLInputElement>(".sm-zoom-step");
 		const stepValue = Number(stepInput?.value);
 		const base =
 			1 +
@@ -111,7 +111,7 @@ class MapInteractionManager implements MapInteractionController {
 
 	// Handle zoom in button clicks to zoom in at the viewport center, calculating the zoom factor based on the step input or default settings
 	private readonly onZoomInClick = () => {
-		const stepInput = this.toolbar.querySelector<HTMLInputElement>(".fm-zoom-step");
+		const stepInput = this.toolbar.querySelector<HTMLInputElement>(".sm-zoom-step");
 		const stepValue = Number(stepInput?.value);
 		const step =
 			Math.abs(stepValue) ||
@@ -123,7 +123,7 @@ class MapInteractionManager implements MapInteractionController {
 
 	// Handle zoom out button clicks to zoom out at the viewport center, calculating the zoom factor based on the step input or default settings
 	private readonly onZoomOutClick = () => {
-		const stepInput = this.toolbar.querySelector<HTMLInputElement>(".fm-zoom-step");
+		const stepInput = this.toolbar.querySelector<HTMLInputElement>(".sm-zoom-step");
 		const stepValue = Number(stepInput?.value);
 		const step =
 			Math.abs(stepValue) ||
@@ -225,15 +225,15 @@ class MapInteractionManager implements MapInteractionController {
 
 	// Getters for the zoom in, zoom out, and reset buttons in the toolbar, returning the corresponding HTML button elements or null if they are not found
 	private get zoomInBtn(): HTMLButtonElement | null {
-		return this.toolbar.querySelector(".fm-zoom-in");
+		return this.toolbar.querySelector(".sm-zoom-in");
 	}
 
 	private get zoomOutBtn(): HTMLButtonElement | null {
-		return this.toolbar.querySelector(".fm-zoom-out");
+		return this.toolbar.querySelector(".sm-zoom-out");
 	}
 
 	private get resetBtn(): HTMLButtonElement | null {
-		return this.toolbar.querySelector(".fm-reset");
+		return this.toolbar.querySelector(".sm-reset");
 	}
 
 	// Apply the current pan and zoom state to the map layers by calculating the appropriate CSS transforms and background styles based on the current offsets and zoom level, and invoking the viewport change callback with the updated parameters
