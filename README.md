@@ -1,7 +1,9 @@
 # Simple Map: interactive maps for Obsidian
 Are you a writer, a world builder, or a really dedicated Dungeon Master or note taker? Do you want to manage and locate your notes on a map of your choosing? Introducing Simple Map for Obsidian! Upload any image to your Obsidian vault and create an interactive map where you can link to notes that call back to a specific location.
 
-<div align="center"><img width="80%" height="auto" alt="Screenshot 2026-04-22 171431" src="https://github.com/user-attachments/assets/a7a86b64-c94b-43fe-becb-0f902b49357e" /></div>
+<div align="center">
+	<img width="717" height="488" alt="image" src="https://github.com/user-attachments/assets/58438e42-987e-42ff-a9b3-421ab33f0fde" />
+</div>
 
 # Features
 - Locally create interactive maps from images in your vault
@@ -11,6 +13,7 @@ Are you a writer, a world builder, or a really dedicated Dungeon Master or note 
 	- Limit which notes appear on which maps by defining unique map IDs
 	- Customize pin icons and sizes
 - Hover over pins to preview your notes
+- Filter Pins on your map using the search bar
 # How to create your own map
 Add the 'simple-map' code block to your note and give it an image for your desired map.
 ### simple-map code block
@@ -48,9 +51,9 @@ repeat: x
 ```
 ````
 <div align="center" style="display:flex;flex-wrap:wrap;justify-content:center;gap:12px;">
-  <img src="READMEAssets/Horizontal Scroll.gif" alt="Horizontal scroll demo" style="width:100%;max-width:320px;height:auto;flex:1 1 300px;">
-  <img src="READMEAssets/Vertical Scroll.gif" alt="Vertical scroll demo" style="width:100%;max-width:320px;height:auto;flex:1 1 300px;">
-  <img src="READMEAssets/Both Scroll.gif" alt="Both scroll demo" style="width:100%;max-width:320px;height:auto;flex:1 1 300px;">
+  <img src="READMEAssets/Horizontal Scrolling.gif" alt="Horizontal scroll demo" style="width:100%;max-width:320px;height:auto;flex:1 1 300px;">
+  <img src="READMEAssets/Vertical Scrolling.gif" alt="Vertical scroll demo" style="width:100%;max-width:320px;height:auto;flex:1 1 300px;">
+  <img src="READMEAssets/Both Scrolling.gif" alt="Both scroll demo" style="width:100%;max-width:320px;height:auto;flex:1 1 300px;">
 </div>
 
 ## Coordinate Customization
@@ -109,4 +112,10 @@ pin size: 24px
 You can preview your notes directly from your map with images and functioning links.
 <div align="center" style="display:flex;flex-wrap:wrap;justify-content:center;gap:12px;">
   <img src="READMEAssets/Previews.gif" alt="Previews demo" style="width:100%;max-width:320px;height:auto;flex:1 1 300px;">
+</div>
+
+## Filter using Search
+You can search through your pins by simply typing in the search bar. Names, Tags, Alieses, and all other frontmatter properties you create can be used as filters to find specific pins on your map. Using quotation marks and "and / &&" or "or / ||" key words, you can search for multiple filters/queries. (i.e. "fation" or "building", "landmark" and "battle", etc.)
+<div align="center" style="display:flex;flex-wrap:wrap;justify-content:center;gap:12px;">
+  <img src="READMEAssets/Search Bar.gif" alt="Previews demo" style="width:100%;max-width:320px;height:auto;flex:1 1 300px;">
 </div>
