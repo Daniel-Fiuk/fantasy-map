@@ -9,7 +9,7 @@ import {
 	SimpleMapSettings,
 	SimpleMapSettingTab,
 } from "./settings";
-import { parseSimpleMapParams, simpleMapHelpMessage } from "./paramaters";
+import { parseSimpleMapParamaters, simpleMapHelpMessage } from "./paramaters";
 import { createMapInteractionController } from "./mapInteractions";
 import { createPinInteractionController } from "./pinInteractions";
 import {
@@ -58,7 +58,7 @@ export default class SimpleMap extends Plugin {
 		ctx: MarkdownPostProcessorContext
 	) {
 		// Parse parameters from the code block and validate the map file
-		const parameters = parseSimpleMapParams(
+		const parameters = parseSimpleMapParamaters(
 			this.app,
 			source,
 			element,

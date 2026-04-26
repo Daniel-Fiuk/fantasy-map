@@ -6,7 +6,7 @@ import {
 	normalizePath,
 	TFile,
 } from "obsidian";
-import { SimpleMapParams } from "./paramaters";
+import { SimpleMapParamaters  } from "./paramaters";
 import {
 	showCustomPreview,
 	hideCustomPreview,
@@ -898,9 +898,9 @@ export function parseSearchQuery(input: string): SearchNode | null {
 		.filter((group) => group.length > 0)
 		.map((group) =>
 			group.length === 1 ? group[0] : { kind: "and", children: group }
-		);
+		) ?? null;
 
-	if (andNodes.length === 0) return null;
+	if (andNodes ===  null || andNodes.length === 0) return null;
 	if (andNodes.length === 1) return andNodes[0];
 	return { kind: "or", children: andNodes };
 }

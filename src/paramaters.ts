@@ -9,7 +9,7 @@ import {
 import { SimpleMapSettings } from "./settings";
 
 // Interface defining the parameters for the simple map
-export interface SimpleMapParams {
+export interface SimpleMapParamaters {
 	map: string;
 	mapIDs: string[];
 	pinSize: string;
@@ -171,14 +171,14 @@ const helpKeywords = [
 //#endregion
 
 // Main function to parse the simple map parameters from the source string
-export function parseSimpleMapParams(
+export function parseSimpleMapParamaters (
 	app: App,
 	source: string,
 	element: HTMLElement,
 	ctx: MarkdownPostProcessorContext,
 	component: Component,
 	settings: SimpleMapSettings
-): SimpleMapParams {
+): SimpleMapParamaters {
 
 	// Split the source into lines, trim whitespace, and filter out empty lines
 	const lines = source
@@ -187,7 +187,7 @@ export function parseSimpleMapParams(
 		.filter(Boolean);
 
 	// Object to hold the parsed parameters, initialized as empty
-	const params: Partial<SimpleMapParams> = {};
+	const params: Partial<SimpleMapParamaters> = {};
 	const helpMessages: string[] = [];
 
 	// Helper function to add a help message to the list if it's not already included
@@ -380,7 +380,7 @@ export function parseSimpleMapParams(
 	}
 
 	// Compile the final parameters object, using default values from the settings or hardcoded defaults if specific parameters were not provided
-	const finalParams: SimpleMapParams = {
+	const finalParams: SimpleMapParamaters = {
 		map: params.map ?? "",
 		mapIDs: params.mapIDs ?? [],
 		pinSize: params.pinSize && params.pinSize.length > 0 ? params.pinSize : settings.defaultPinSize,
